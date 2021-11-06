@@ -1,0 +1,6 @@
+.DS_Store
+/target
+**/*.rs.bk
+Cargo.lock
+bin/
+wasm-pack.log
