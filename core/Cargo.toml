@@ -1,6 +1,5 @@
 [workspace]
 members = [
-  "crates/render",
   "crates/math",
 ]
 
@@ -23,7 +22,6 @@ js-sys = "0.3.50"
 console_error_panic_hook = { version = "0.1.6", optional = true }
 wee_alloc = { version = "0.4.5", optional = true }
 anyhow = "1.0.44"
-render = { path = "crates/render" }
 math = { path = "crates/math" }
 
 [dependencies.web-sys]
