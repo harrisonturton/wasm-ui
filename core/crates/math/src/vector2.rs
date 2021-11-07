@@ -2,10 +2,19 @@ use std::default::Default;
 use std::ops::{
     Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
 };
+use bytemuck::{Pod, Zeroable};
+use crate::Vector3;
+
+#[macro_export]
+macro_rules! vector2 {
+    ($x: expr, $y: expr) => {
+        Vector2 { x: $x, y: $y }
+    };
+}
 
 /// A 2-dimensional vector.
 #[repr(C)]
-#[derive(PartialEq, Copy, Clone, Debug)]
+#[derive(PartialEq, Copy, Clone, Debug, Pod, Zeroable)]
 pub struct Vector2 {
     /// The x component of the vector.
     pub x: f32,
@@ -337,5 +346,388 @@ impl RemAssign<f32> for Vector2 {
     fn rem_assign(&mut self, rhs: f32) {
         self.x %= rhs;
         self.y %= rhs;
+    }
+}
+
+// --------------------------------------------------
+// Transform into Vector2
+// --------------------------------------------------
+
+impl From<[f32; 2]> for Vector2 {
+    fn from(lhs: [f32; 2]) -> Vector2 {
+        Vector2::new(lhs[0], lhs[1])
+    }
+}
+
+impl From<(f32, f32)> for Vector2 {
+    fn from(lhs: (f32, f32)) -> Vector2 {
+        let (x, y) = lhs;
+        Vector2::new(x, y)
+    }
+}
+
+// --------------------------------------------------
+// Transform from Vector2
+// --------------------------------------------------
+
+impl From<Vector2> for Vector3 {
+    fn from(lhs: Vector2) -> Vector3 {
+        Vector3::new(lhs.x, lhs.y, 0.0)
+    }
+}
+
+impl From<Vector2> for [f32; 2] {
+    fn from(lhs: Vector2) -> [f32; 2] {
+        [lhs.x, lhs.y]
+    }
+}
+
+impl From<Vector2> for (f32, f32) {
+    fn from(lhs: Vector2) -> (f32, f32) {
+        (lhs.x, lhs.y)
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn macro_constructor_is_equal_to_new_constructor() {
+        let actual = vector2!(199.0, -512.0);
+        let expected = Vector2::new(199.0, -512.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn up_constructor_is_up() {
+        let actual = Vector2::up();
+        let expected = Vector2::new(0.0, 1.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn down_constructor_is_down() {
+        let actual = Vector2::down();
+        let expected = Vector2::new(0.0, -1.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn left_constructor_is_left() {
+        let actual = Vector2::left();
+        let expected = Vector2::new(-1.0, 0.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn right_constructor_is_right() {
+        let actual = Vector2::right();
+        let expected = Vector2::new(1.0, 0.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn sum_gives_expected_result() {
+        let vec = vector2!(-50.0, 100.0);
+
+        let actual = vec.sum();
+        let expected = 50.0;
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn product_gives_expected_result() {
+        let vec = vector2!(-50.0, 100.0);
+
+        let actual = vec.product();
+        let expected = -5000.0;
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn dot_product_is_zero_for_equal_vectors() {
+        let a = vector2!(0.0, 1.0);
+        let b = vector2!(0.0, 1.0);
+
+        let actual = Vector2::dot(a, b);
+        let expected = 1.0;
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn dot_product_gives_expected_result() {
+        let a = vector2!(50.0, -100.0);
+        let b = vector2!(-20.0, 100.0);
+
+        let actual = Vector2::dot(a, b);
+        let expected = -11000.0;
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn magnitude_for_unit_vectors_are_zero() {
+        let up = Vector2::up();
+        let up_magnitude = up.magnitude();
+        assert_eq!(1.0, up_magnitude);
+
+        let down = Vector2::down();
+        let down_magnitude = down.magnitude();
+        assert_eq!(1.0, down_magnitude);
+
+        let left = Vector2::left();
+        let left_magnitude = left.magnitude();
+        assert_eq!(1.0, left_magnitude);
+
+        let right = Vector2::right();
+        let right_magnitude = right.magnitude();
+        assert_eq!(1.0, right_magnitude);
+    }
+
+    #[test]
+    fn normalize_gives_correct_result_for_non_unit_vector() {
+        let vec = vector2!(0.0, 100.0);
+        let actual = vec.normalized();
+        let expected = vector2!(0.0, 1.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn normalize_gives_correct_result_for_unit_vector() {
+        let vec = Vector2::up();
+        let actual = vec.normalized();
+        let expected = Vector2::up();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn min_gives_expected_result_when_x_is_less_than_y() {
+        let vec = vector2!(-100.0, 50.0);
+        assert_eq!(-100.0, vec.min());
+    }
+
+    #[test]
+    fn min_gives_expected_result_when_y_is_less_than_x() {
+        let vec = vector2!(50.0, -100.0);
+        assert_eq!(-100.0, vec.min());
+    }
+
+    #[test]
+    fn max_gives_expected_result_when_x_is_greater_than_y() {
+        let vec = vector2!(50.0, -100.0);
+        assert_eq!(50.0, vec.max());
+    }
+
+    #[test]
+    fn max_gives_expected_result_when_y_is_greater_than_x() {
+        let vec = vector2!(-100.0, 50.0);
+        assert_eq!(50.0, vec.max());
+    }
+
+    #[test]
+    fn default_constructor_is_zero() {
+        let actual = Default::default();
+        let expected = Vector2::zero();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn negate_gives_expected_result() {
+        let vec = vector2!(-100.0, 50.0);
+
+        let actual = -vec;
+        let expected = vector2!(100.0, -50.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn adding_vector_to_vector_gives_expected_result() {
+        let a = vector2!(-100.0, 50.0);
+        let b = vector2!(100.0, -50.0);
+
+        let actual = a + b;
+        let expected = Vector2::zero();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn add_assign_vector_to_vector_gives_expected_result() {
+        let mut actual = vector2!(-100.0, 50.0);
+        actual += vector2!(100.0, -50.0);
+
+        let expected = Vector2::zero();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn subtracting_vector_from_vector_gives_expected_result() {
+        let a = vector2!(-100.0, 50.0);
+        let b = vector2!(100.0, -50.0);
+
+        let actual = a - b;
+        let expected = vector2!(-200.0, 100.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn subtract_assign_vector_to_vector_gives_expected_result() {
+        let mut actual = vector2!(-100.0, 50.0);
+        actual -= vector2!(100.0, -50.0);
+
+        let expected = vector2!(-200.0, 100.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn multiplying_vector_by_vector_gives_expected_result() {
+        let a = vector2!(-100.0, 50.0);
+        let b = vector2!(100.0, -50.0);
+
+        let actual = a * b;
+        let expected = vector2!(-10000.0, -2500.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn multiply_assign_vector_to_vector_gives_expected_result() {
+        let mut actual = vector2!(-100.0, 50.0);
+        actual *= vector2!(100.0, -50.0);
+
+        let expected = vector2!(-10000.0, -2500.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn dividing_vector_by_vector_gives_expected_result() {
+        let a = vector2!(-100.0, 50.0);
+        let b = vector2!(100.0, -50.0);
+
+        let actual = a / b;
+        let expected = vector2!(-1.0, -1.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn div_assign_vector_to_vector_gives_expected_result() {
+        let mut actual = vector2!(-100.0, 50.0);
+        actual /= vector2!(100.0, -50.0);
+
+        let expected = vector2!(-1.0, -1.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn remainder_vector_by_vector_gives_expected_result() {
+        let a = vector2!(-100.0, 50.0);
+        let b = vector2!(100.0, -50.0);
+
+        let actual = a % b;
+        let expected = Vector2::zero();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn remainder_assign_vector_to_vector_gives_expected_result() {
+        let mut actual = vector2!(-100.0, 50.0);
+        actual %= vector2!(100.0, -50.0);
+
+        let expected = Vector2::zero();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn add_scalar_to_vector_gives_expected_result() {
+        let vec = vector2!(-100.0, 50.0);
+        let scalar = 100.0;
+
+        let actual = vec + scalar;
+        let expected = vector2!(0.0, 150.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn add_assign_scalar_to_vector_gives_expected_result() {
+        let mut actual = vector2!(-100.0, 50.0);
+        actual += 100.0;
+
+        let expected = vector2!(0.0, 150.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn subtract_scalar_from_vector_gives_expected_result() {
+        let vec = vector2!(-100.0, 50.0);
+        let scalar = 100.0;
+
+        let actual = vec - scalar;
+        let expected = vector2!(-200.0, -50.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn subtract_assign_scalar_to_vector_gives_expected_result() {
+        let mut actual = vector2!(-100.0, 50.0);
+        actual -= 100.0;
+
+        let expected = vector2!(-200.0, -50.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn multiply_vector_by_scalar_gives_expected_result() {
+        let vec = vector2!(-100.0, 50.0);
+        let scalar = 100.0;
+
+        let actual = vec * scalar;
+        let expected = vector2!(-10000.0, 5000.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn multiply_assign_scalar_to_vector_gives_expected_result() {
+        let mut actual = vector2!(-100.0, 50.0);
+        actual *= 100.0;
+
+        let expected = vector2!(-10000.0, 5000.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn divide_vector_by_scalar_gives_expected_result() {
+        let vec = vector2!(-100.0, 50.0);
+        let scalar = 100.0;
+
+        let actual = vec / scalar;
+        let expected = vector2!(-1.0, 0.5);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn divide_assign_scalar_to_vector_gives_expected_result() {
+        let mut actual = vector2!(-100.0, 50.0);
+        actual /= 100.0;
+
+        let expected = vector2!(-1.0, 0.5);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn remainder_vector_by_scalar_gives_expected_result() {
+        let vec = vector2!(-100.0, 50.0);
+        let scalar = 100.0;
+
+        let actual = vec % scalar;
+        let expected = vector2!(0.0, 50.0);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn remainder_assign_scalar_to_vector_gives_expected_result() {
+        let mut actual = vector2!(-100.0, 50.0);
+        actual %= 100.0;
+
+        let expected = vector2!(0.0, 50.0);
+        assert_eq!(expected, actual);
     }
 }

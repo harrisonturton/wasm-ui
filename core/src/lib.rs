@@ -1,5 +1,8 @@
 use wasm_bindgen::prelude::wasm_bindgen;
 
+use render::webgl::{Backend, WebGlBackend};
+use math::Vector3;
+
 // Use `wee_alloc` as the global allocator, because it is smaller.
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
@@ -18,10 +21,13 @@ extern "C" {
 
 /// This is the entrypoint to the application. This is called from the browser.
 #[wasm_bindgen]
-pub fn start(_canvas_id: &str) {
+pub fn start(canvas_id: &str) -> WebGlBackend {
     // Forward panic messages to console.error
     #[cfg(feature = "console_error_panic_hook")]
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
-    log("Hello world!");
+    let backend = WebGlBackend::try_new(canvas_id).unwrap();
+    backend.render().expect("failed to render");
+
+    backend
 }
