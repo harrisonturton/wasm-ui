@@ -2,6 +2,7 @@
 members = [
   "crates/math",
   "crates/render",
+  "crates/layout",
 ]
 
 [package]
