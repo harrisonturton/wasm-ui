@@ -1,8 +1,7 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
-}
+#![warn(clippy::all)]
+
+mod tree;
+pub use tree::*;
+
+mod widgets;
+pub use widgets::*;
