@@ -1,4 +1,4 @@
-use anyhow::{Error, anyhow};
+use anyhow::Error;
 use wasm_bindgen::prelude::wasm_bindgen;
 use web_sys::HtmlCanvasElement;
 use std::rc::Rc;
@@ -70,10 +70,6 @@ impl BrowserDriver {
         let root_id = tree.insert(root_lbox);
         tree.set_root(Some(root_id));
 
-        let root = match tree.root {
-            Some(id) => id,
-            None => return Ok(()),
-        };
         let mut parent_offsets = VecDeque::from([Vector2::zero()]);
         for lbox in tree.iter() {
             let offset = parent_offsets.pop_front().unwrap();

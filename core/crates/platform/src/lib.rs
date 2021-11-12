@@ -1,5 +1,4 @@
 #![warn(clippy::all)]
-use anyhow::Error;
 use layout::Layout;
 
 pub mod browser;

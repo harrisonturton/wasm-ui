@@ -1,5 +1,5 @@
 use wasm_bindgen::prelude::wasm_bindgen;
-use render::browser::BrowserDriver;
+use platform::browser::BrowserDriver;
 
 mod app;
 use app::App;
