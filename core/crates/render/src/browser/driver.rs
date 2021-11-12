@@ -7,6 +7,7 @@ use std::collections::VecDeque;
 use crate::AppDriver;
 use super::WebGl;
 use super::shaders::{ShaderLibrary, MeshPainter};
+use super::util::try_get_canvas;
 use math::{Rect, Vector2, Vector3};
 use layout::{LayoutTree, LayoutBox, Color};
 
@@ -37,10 +38,12 @@ impl BrowserDriver {
 }
 
 impl BrowserDriver {
-    pub fn try_new(canvas: HtmlCanvasElement, gl: WebGl, app: Box<dyn AppDriver>) -> Result<BrowserDriver, Error> {
+    pub fn try_new(canvas_id: &str, app: Box<dyn AppDriver>) -> Result<BrowserDriver, Error> {
+        let canvas = try_get_canvas(canvas_id)?;
+        let gl = WebGl::try_new(&canvas)?;
         let gl = Rc::new(gl);
         let shaders = ShaderLibrary::try_new(&gl)?;
-        Ok(BrowserDriver { canvas, shaders, gl, app })
+        Ok(BrowserDriver { canvas, gl, shaders, app })
     }
 
     pub fn render(&self) -> Result<(), Error> {
