@@ -1,13 +1,18 @@
+use bytemuck::{Pod, Zeroable};
 use std::default::Default;
 use std::ops::{
     Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
 };
-use bytemuck::{Pod, Zeroable};
 
 #[macro_export]
 macro_rules! vector4 {
     ($x: expr, $y: expr, $z: expr, $w: expr) => {
-        Vector4 { x: $x, y: $y, z: $z, w: $w }
+        Vector4 {
+            x: $x,
+            y: $y,
+            z: $z,
+            w: $w,
+        }
     };
 }
 
@@ -177,7 +182,12 @@ impl Add<Vector4> for Vector4 {
     /// of the original components.
     #[inline]
     fn add(self, rhs: Vector4) -> Vector4 {
-        Vector4::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z, self.w + rhs.w)
+        Vector4::new(
+            self.x + rhs.x,
+            self.y + rhs.y,
+            self.z + rhs.z,
+            self.w + rhs.w,
+        )
     }
 }
 
@@ -198,7 +208,12 @@ impl Sub<Vector4> for Vector4 {
     /// of the original components.
     #[inline]
     fn sub(self, rhs: Vector4) -> Vector4 {
-        Vector4::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z, self.w - rhs.w)
+        Vector4::new(
+            self.x - rhs.x,
+            self.y - rhs.y,
+            self.z - rhs.z,
+            self.w - rhs.w,
+        )
     }
 }
 
@@ -219,7 +234,12 @@ impl Mul<Vector4> for Vector4 {
     /// of the original two components.
     #[inline]
     fn mul(self, rhs: Vector4) -> Vector4 {
-        Vector4::new(self.x * rhs.x, self.y * rhs.y, self.z * rhs.z, self.w * rhs.w)
+        Vector4::new(
+            self.x * rhs.x,
+            self.y * rhs.y,
+            self.z * rhs.z,
+            self.w * rhs.w,
+        )
     }
 }
 
@@ -240,7 +260,12 @@ impl Div<Vector4> for Vector4 {
     /// of the original components.
     #[inline]
     fn div(self, rhs: Vector4) -> Vector4 {
-        Vector4::new(self.x / rhs.x, self.y / rhs.y, self.z / rhs.z, self.w / rhs.w)
+        Vector4::new(
+            self.x / rhs.x,
+            self.y / rhs.y,
+            self.z / rhs.z,
+            self.w / rhs.w,
+        )
     }
 }
 
@@ -261,7 +286,12 @@ impl Rem<Vector4> for Vector4 {
     /// the remainder of the original two components.
     #[inline]
     fn rem(self, rhs: Vector4) -> Vector4 {
-        Vector4::new(self.x % rhs.x, self.y % rhs.y, self.z % rhs.z, self.w % rhs.w)
+        Vector4::new(
+            self.x % rhs.x,
+            self.y % rhs.y,
+            self.z % rhs.z,
+            self.w % rhs.w,
+        )
     }
 }
 

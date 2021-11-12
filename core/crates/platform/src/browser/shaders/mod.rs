@@ -1,6 +1,6 @@
+use super::WebGl;
 use anyhow::Error;
 use math::Vector3;
-use super::WebGl;
 use std::rc::Rc;
 
 mod standard;

@@ -1,6 +1,6 @@
-use std::fmt::Debug;
+use super::{Layout, LayoutBox, LayoutTree, RenderBox, SizedLayoutBox};
 use math::{Vector2, Vector4};
-use super::{Layout, LayoutTree, SizedLayoutBox, LayoutBox, RenderBox};
+use std::fmt::Debug;
 
 #[derive(Debug)]
 pub struct Positioned {
@@ -37,7 +37,7 @@ impl Layout for Container {
             children: vec![],
             content: RenderBox {
                 material: Material::Solid(Color::blue()),
-            }
+            },
         }
     }
 }
@@ -45,7 +45,7 @@ impl Layout for Container {
 #[derive(PartialEq, Clone, Debug)]
 pub enum Material {
     None,
-    Solid(Color)
+    Solid(Color),
 }
 
 /// A color stored as RGBA components, each ranging from 0 - 255.
@@ -54,12 +54,12 @@ pub struct Color {
     pub r: f32,
     pub g: f32,
     pub b: f32,
-    pub a: f32
+    pub a: f32,
 }
 
 impl Color {
     pub fn rgba(r: f32, g: f32, b: f32, a: f32) -> Color {
-        Color{ r, g, b, a }
+        Color { r, g, b, a }
     }
 
     pub fn transparent() -> Color {

@@ -1,5 +1,5 @@
-pub mod util;
 pub mod shaders;
+pub mod util;
 
 mod driver;
 pub use driver::BrowserDriver;

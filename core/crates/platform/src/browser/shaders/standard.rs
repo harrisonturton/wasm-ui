@@ -1,9 +1,9 @@
-use web_sys::WebGlProgram;
 use anyhow::Error;
 use math::{Vector2, Vector3, Vector4};
+use web_sys::WebGlProgram;
 
-use super::WebGl;
 use super::MeshPainter;
+use super::WebGl;
 use std::rc::Rc;
 
 const VERTEX_SHADER: &str = r#"
@@ -43,11 +43,8 @@ pub struct StandardShader {
 
 impl StandardShader {
     pub fn try_new(gl: &Rc<WebGl>) -> Result<StandardShader, Error> {
-        let program = gl.try_create_shader_program(
-            VERTEX_SHADER,
-            FRAGMENT_SHADER
-        )?;
-        Ok(StandardShader { 
+        let program = gl.try_create_shader_program(VERTEX_SHADER, FRAGMENT_SHADER)?;
+        Ok(StandardShader {
             gl: Rc::clone(gl),
             program,
             viewport: Vector2::zero(),
@@ -64,8 +61,10 @@ impl StandardShader {
     }
 
     fn set_uniforms(&self) -> Result<(), Error> {
-        self.gl.set_uniform_vec2(&self.program, "u_viewport", self.viewport)?;
-        self.gl.set_uniform_vec4(&self.program, "u_color", self.color)?;
+        self.gl
+            .set_uniform_vec2(&self.program, "u_viewport", self.viewport)?;
+        self.gl
+            .set_uniform_vec4(&self.program, "u_color", self.color)?;
         Ok(())
     }
 }

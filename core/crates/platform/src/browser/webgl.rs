@@ -3,8 +3,7 @@ use bytemuck::cast_slice;
 use js_sys::WebAssembly;
 use math::{Vector2, Vector3, Vector4};
 use wasm_bindgen::JsCast;
-use web_sys::{WebGlBuffer, WebGlProgram, WebGlRenderingContext, HtmlCanvasElement};
-
+use web_sys::{HtmlCanvasElement, WebGlBuffer, WebGlProgram, WebGlRenderingContext};
 
 pub struct WebGl {
     pub gl: WebGlRenderingContext,
@@ -148,7 +147,11 @@ impl WebGl {
         Ok(())
     }
 
-    pub fn try_create_shader_program(&self, vertex_shader_src: &str, fragment_shader_src: &str) -> Result<WebGlProgram, Error> {
+    pub fn try_create_shader_program(
+        &self,
+        vertex_shader_src: &str,
+        fragment_shader_src: &str,
+    ) -> Result<WebGlProgram, Error> {
         super::util::try_create_shader_program(&self.gl, vertex_shader_src, fragment_shader_src)
     }
 }

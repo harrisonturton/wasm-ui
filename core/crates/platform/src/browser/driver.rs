@@ -1,15 +1,15 @@
 use anyhow::Error;
+use std::collections::VecDeque;
+use std::rc::Rc;
 use wasm_bindgen::prelude::wasm_bindgen;
 use web_sys::HtmlCanvasElement;
-use std::rc::Rc;
-use std::collections::VecDeque;
 
-use crate::AppDriver;
-use super::WebGl;
-use super::shaders::{ShaderLibrary, MeshPainter};
+use super::shaders::{MeshPainter, ShaderLibrary};
 use super::util::try_get_canvas;
+use super::WebGl;
+use crate::AppDriver;
+use layout::{Color, LayoutBox, LayoutTree};
 use math::{Rect, Vector2, Vector3};
-use layout::{LayoutTree, LayoutBox, Color};
 
 #[wasm_bindgen]
 extern "C" {
@@ -43,7 +43,12 @@ impl BrowserDriver {
         let gl = WebGl::try_new(&canvas)?;
         let gl = Rc::new(gl);
         let shaders = ShaderLibrary::try_new(&gl)?;
-        Ok(BrowserDriver { canvas, gl, shaders, app })
+        Ok(BrowserDriver {
+            canvas,
+            gl,
+            shaders,
+            app,
+        })
     }
 
     pub fn render(&self) -> Result<(), Error> {
@@ -107,7 +112,7 @@ impl BrowserDriver {
     pub fn draw_line(&mut self, start: Vector2, end: Vector2, color: Color) -> Result<(), Error> {
         let vertices = [
             Vector3::new(start.x, start.y, 0.0),
-            Vector3::new(end.x, end.y, 0.0)
+            Vector3::new(end.x, end.y, 0.0),
         ];
         self.shaders.standard.set_color(color.to_linear());
         self.shaders.standard.paint_line(&vertices)?;

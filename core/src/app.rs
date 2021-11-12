@@ -1,6 +1,6 @@
-use platform::AppDriver;
+use layout::{Container, Layout, Positioned};
 use math::Vector2;
-use layout::{Layout, Positioned, Container};
+use platform::AppDriver;
 
 pub struct App {
     position: Vector2,
@@ -26,7 +26,7 @@ impl AppDriver for App {
             position: self.position,
             child: Box::new(Container {
                 size: (100.0, 100.0).into(),
-            })
+            }),
         })
     }
 }

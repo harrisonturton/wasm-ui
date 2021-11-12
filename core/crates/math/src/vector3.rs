@@ -1,13 +1,17 @@
+use bytemuck::{Pod, Zeroable};
 use std::default::Default;
 use std::ops::{
     Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
 };
-use bytemuck::{Pod, Zeroable};
 
 #[macro_export]
 macro_rules! vector3 {
     ($x: expr, $y: expr, $z: expr) => {
-        Vector3 { x: $x, y: $y, z: $z }
+        Vector3 {
+            x: $x,
+            y: $y,
+            z: $z,
+        }
     };
 }
 

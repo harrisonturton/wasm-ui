@@ -1,9 +1,9 @@
+use crate::Vector3;
+use bytemuck::{Pod, Zeroable};
 use std::default::Default;
 use std::ops::{
     Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
 };
-use bytemuck::{Pod, Zeroable};
-use crate::Vector3;
 
 #[macro_export]
 macro_rules! vector2 {
@@ -387,7 +387,6 @@ impl From<Vector2> for (f32, f32) {
         (lhs.x, lhs.y)
     }
 }
-
 
 #[cfg(test)]
 mod tests {

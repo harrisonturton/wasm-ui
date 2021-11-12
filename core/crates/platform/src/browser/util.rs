@@ -1,7 +1,7 @@
+use anyhow::{anyhow, Error};
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlCanvasElement, WebGlProgram, WebGlRenderingContext, WebGlShader};
-use anyhow::{anyhow, Error};
 
 #[wasm_bindgen]
 extern "C" {
