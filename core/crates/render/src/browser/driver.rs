@@ -8,7 +8,7 @@ use crate::AppDriver;
 use super::WebGl;
 use super::shaders::{ShaderLibrary, MeshPainter};
 use math::{Rect, Vector2, Vector3};
-use layout::{LayoutTree, Color};
+use layout::{LayoutTree, LayoutBox, Color};
 
 #[wasm_bindgen]
 extern "C" {
@@ -53,7 +53,6 @@ impl BrowserDriver {
     }
 
     pub fn try_tick(&mut self, time: f32) -> Result<(), Error> {
-        self.app.tick(time)?;
         self.clear(Color::white());
 
         let width = self.canvas.client_width() as f32;
@@ -61,38 +60,20 @@ impl BrowserDriver {
         let viewport = Vector2::new(width, height);
         self.shaders.standard.set_viewport(viewport);
 
-        // Rotating line in center
-        let speed = 0.003;
-        let x = (time * speed).sin();
-        let y = (time * speed).cos();
-        let center = Vector2::new(width / 2.0, height / 2.0);
-        self.draw_line(center, center + Vector2::new(x, y) * 300.0, Color::blue())?;
-
-        // Walk the tree and draw each LayoutBox as a rect
-        /*let mut tree = LayoutTree::new();
-        let widgets: Box<dyn layout::Layout> = Box::new(layout::Container {
-            size: (200.0 * (time / 200.0).sin(), 200.0 * (time / 200.0).sin()).into(),
-        });
+        let widgets = self.app.tick(time);
+        let mut tree = LayoutTree::new();
         let root = widgets.layout(&mut tree);
-        let root_lbox = layout::LayoutBox::from_child(root, Vector2::zero());
+        let root_lbox = LayoutBox::from_child(root, Vector2::zero());
         let root_id = tree.insert(root_lbox);
-        tree.set_root(Some(root_id));*/
-
-        let tree = self.app.tick(time)?;
+        tree.set_root(Some(root_id));
 
         let root = match tree.root {
             Some(id) => id,
             None => return Ok(()),
         };
-
-        let mut remaining = VecDeque::new();
-        let mut parent_offsets = VecDeque::new();
-        remaining.push_front(root);
-        parent_offsets.push_front(Vector2::zero());
-        while let Some(lbox_id) = remaining.pop_front() {
+        let mut parent_offsets = VecDeque::from([Vector2::zero()]);
+        for lbox in tree.iter() {
             let offset = parent_offsets.pop_front().unwrap();
-            let lbox = tree.get(lbox_id).unwrap();
-
             let min = lbox.rect.min + offset;
             let max = lbox.rect.max + offset;
             let rect = Rect::new(min, max);
@@ -101,17 +82,8 @@ impl BrowserDriver {
                 layout::Material::None => Color::transparent(),
             };
             self.draw_rect(rect, color)?;
-            for child in &lbox.children {
-                remaining.push_front(*child);
-                parent_offsets.push_front(min);
-            }
+            parent_offsets.push_front(min);
         }
-
-        // Rectangle
-        //let origin = Vector2::new(100.0, 50.0);
-        //let end = Vector2::new(200.0, 500.0);
-        //let rect = Rect::new(origin, end);
-        //self.draw_rect(rect, Color::red())?;
 
         Ok(())
     }

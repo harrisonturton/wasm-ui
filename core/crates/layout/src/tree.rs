@@ -1,8 +1,9 @@
 use math::{Vector2, Rect};
 use std::fmt::Debug;
+use std::collections::VecDeque;
 use super::{Color, Material};
 
-#[derive(Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct RenderBox {
     pub material: Material,
 }
@@ -37,7 +38,7 @@ pub type LayoutBoxId = usize;
 
 /// An element that has calculated it's own size, but has not been positioned
 /// by it's parent yet. This is the intermediate step during layout.
-#[derive(Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct SizedLayoutBox {
     pub size: Vector2,
     pub content: RenderBox,
@@ -45,7 +46,7 @@ pub struct SizedLayoutBox {
 }
 
 /// An element that has finished layout. It has been been sized and positioned.
-#[derive(Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct LayoutBox {
     pub rect: Rect,
     pub content: RenderBox,
@@ -108,5 +109,82 @@ impl LayoutTree {
     /// Get a reference to the [LayoutBox] indexed by a [LayoutBoxId].
     pub fn get(&self, id: LayoutBoxId) -> Option<&LayoutBox> {
         self.boxes.get(id)
+    }
+
+    /// Get an iterator over a breadth-first search
+    pub fn iter(&self) -> LayoutTreeIterator {
+        LayoutTreeIterator {
+            tree: self,
+            remaining: match self.root {
+                Some(root) => VecDeque::from([root]),
+                None => VecDeque::new(),
+            },
+        }
+    }
+}
+
+pub struct LayoutTreeIterator<'a> {
+    tree: &'a LayoutTree,
+    remaining: VecDeque<LayoutBoxId>,
+}
+
+impl<'a> Iterator for LayoutTreeIterator<'a> {
+    type Item = &'a LayoutBox;
+
+    fn next(&mut self) -> Option<&'a LayoutBox> {
+        let next_id = self.remaining.pop_front()?;
+        let lbox = self.tree.get(next_id)?;
+        for child in &lbox.children {
+            self.remaining.push_back(*child);
+        }
+        Some(lbox)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn layout_tree_iter_works() {
+        let mut tree = LayoutTree::new();
+        let a_child = LayoutBox {
+            rect: Rect::new((4.0, 4.0).into(), (2.0, 2.0).into()),
+            content: RenderBox { material: Material::None },
+            children: vec![],
+        };
+        let a_child_id = tree.insert(a_child.clone());
+        let a = LayoutBox {
+            rect: Rect::new((1.0, 1.0).into(), (2.0, 2.0).into()),
+            content: RenderBox { material: Material::None },
+            children: vec![a_child_id],
+        };
+        let a_id = tree.insert(a.clone());
+
+        let b_child = LayoutBox {
+            rect: Rect::new((5.0, 5.0).into(), (2.0, 2.0).into()),
+            content: RenderBox { material: Material::None },
+            children: vec![],
+        };
+        let b_child_id = tree.insert(b_child.clone());
+        let b = LayoutBox {
+            rect: Rect::new((2.0, 2.0).into(), (2.0, 2.0).into()),
+            content: RenderBox { material: Material::None },
+            children: vec![b_child_id]
+        };
+        let b_id = tree.insert(b.clone());
+        let c = LayoutBox {
+            rect: Rect::new((3.0, 3.0).into(), (3.0, 3.0).into()),
+            content: RenderBox { material: Material::None },
+            children: vec![a_id, b_id]
+        };
+        let c_id = tree.insert(c.clone());
+        tree.set_root(Some(c_id));
+
+        let actual: Vec<_> = tree.iter().cloned().collect();
+        let expected = vec![c, a, b, a_child, b_child];
+        for (i, _) in actual.iter().enumerate() {
+            assert_eq!(expected[i], actual[i])
+        }
     }
 }

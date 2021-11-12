@@ -42,14 +42,14 @@ impl Layout for Container {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Material {
     None,
     Solid(Color)
 }
 
 /// A color stored as RGBA components, each ranging from 0 - 255.
-#[derive(Copy, Clone, Debug)]
+#[derive(PartialEq, Copy, Clone, Debug)]
 pub struct Color {
     pub r: f32,
     pub g: f32,

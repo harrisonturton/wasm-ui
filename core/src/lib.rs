@@ -47,15 +47,14 @@ pub struct App {
 impl App {
     pub fn new() -> App {
         let mut tree = LayoutTree::new();
+
         let widgets = Box::new(Positioned {
             position: (30.0, 30.0).into(),
             child: Box::new(Container {
                 size: (100.0, 100.0).into(),
             })
         });
-        //let widgets: Box<dyn Layout> = Box::new(Container {
-        //    size: (100.0, 100.0).into(),
-        //});
+
         let root = widgets.layout(&mut tree);
         let root_lbox = LayoutBox::from_child(root, Vector2::zero());
         let root_id = tree.insert(root_lbox);
@@ -66,7 +65,14 @@ impl App {
 }
 
 impl AppDriver for App {
-    fn tick(&mut self, _time: f32) -> Result<LayoutTree, Error> {
-        Ok(self.tree.clone())
+    fn tick(&mut self, time: f32) -> Box<dyn Layout> {
+        let x = 100.0 + 100.0 * (time / 200.0).sin();
+        let y = 100.0 + 100.0 * (time / 200.0).cos();
+        Box::new(Positioned {
+            position: (x, y).into(),
+            child: Box::new(Container {
+                size: (100.0, 100.0).into(),
+            })
+        })
     }
 }
