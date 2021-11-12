@@ -1,4 +1,11 @@
 use math::{Vector2, Rect};
+use std::fmt::Debug;
+use super::{Color, Material};
+
+#[derive(Clone, Debug)]
+pub struct RenderBox {
+    pub material: Material,
+}
 
 /// This is the essential trait of the box model. It is implemented by all
 /// components that undergo the box layout process.
@@ -16,8 +23,8 @@ use math::{Vector2, Rect};
 /// This process takes heavy inspiration from the [Flutter render
 /// pipeline](https://www.youtube.com/watch?v=UUfXWzp0-DU) and the CSS box
 /// model.
-pub trait Layout<C> {
-    fn layout(&self, tree: &mut LayoutTree<C>) -> SizedLayoutBox<C>;
+pub trait Layout: Debug {
+    fn layout(&self, tree: &mut LayoutTree) -> SizedLayoutBox;
 }
 
 /// Used to get a [LayoutBox] from a [LayoutTree].
@@ -31,24 +38,24 @@ pub type LayoutBoxId = usize;
 /// An element that has calculated it's own size, but has not been positioned
 /// by it's parent yet. This is the intermediate step during layout.
 #[derive(Clone, Debug)]
-pub struct SizedLayoutBox<C> {
+pub struct SizedLayoutBox {
     pub size: Vector2,
-    pub content: C,
+    pub content: RenderBox,
     pub children: Vec<LayoutBoxId>,
 }
 
 /// An element that has finished layout. It has been been sized and positioned.
 #[derive(Clone, Debug)]
-pub struct LayoutBox<C> {
+pub struct LayoutBox {
     pub rect: Rect,
-    pub content: C,
+    pub content: RenderBox,
     pub children: Vec<LayoutBoxId>,
 }
 
-impl<C> LayoutBox<C> {
+impl LayoutBox {
     /// Convenience method to turn a [SizedLayoutBox] into a [LayoutBox]. This
     /// is handy when implementing the [Layout] trait.
-    pub fn from_child<I>(child: SizedLayoutBox<C>, pos: I) -> LayoutBox<C>
+    pub fn from_child<I>(child: SizedLayoutBox, pos: I) -> LayoutBox
     where
         I: Into<Vector2>
     {
@@ -71,14 +78,14 @@ impl<C> LayoutBox<C> {
 /// The tree is implemented as a memory arena to be indexed into using a
 /// [LayoutBoxId]. This makes it much easier to use with the borrow checker.
 #[derive(Clone, Default, Debug)]
-pub struct LayoutTree<C> {
-    root: Option<LayoutBoxId>,
-    boxes: Vec<LayoutBox<C>>,
+pub struct LayoutTree {
+    pub root: Option<LayoutBoxId>,
+    pub boxes: Vec<LayoutBox>,
 }
 
-impl<C> LayoutTree<C> {
+impl LayoutTree {
     /// Create a new empty [LayoutTree].
-    pub fn new() -> LayoutTree<C> {
+    pub fn new() -> LayoutTree {
         LayoutTree {
             root: None,
             boxes: Vec::new(),
@@ -93,13 +100,13 @@ impl<C> LayoutTree<C> {
 
     /// Insert a [LayoutBox] into the tree and get a [LayoutBoxId] to fetch it
     /// again later.
-    pub fn insert(&mut self, lbox: LayoutBox<C>) -> LayoutBoxId {
+    pub fn insert(&mut self, lbox: LayoutBox) -> LayoutBoxId {
         self.boxes.push(lbox);
         self.boxes.len() -1
     }
 
     /// Get a reference to the [LayoutBox] indexed by a [LayoutBoxId].
-    pub fn get(&mut self, id: LayoutBoxId) -> Option<&LayoutBox<C>> {
+    pub fn get(&self, id: LayoutBoxId) -> Option<&LayoutBox> {
         self.boxes.get(id)
     }
 }

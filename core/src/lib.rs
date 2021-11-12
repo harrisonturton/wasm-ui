@@ -1,6 +1,9 @@
 use wasm_bindgen::prelude::wasm_bindgen;
 use render::browser::{BrowserDriver, WebGl};
 use render::AppDriver;
+use math::Vector2;
+use layout::{Layout, LayoutTree, Positioned, Container, LayoutBox};
+use anyhow::Error;
 
 // Use `wee_alloc` as the global allocator, because it is smaller.
 #[cfg(feature = "wee_alloc")]
@@ -37,19 +40,33 @@ pub fn start(canvas_id: &str) -> BrowserDriver {
     backend
 }
 
-// AppDriver -> Implemented by app so it can be driven
-// RenderDriver -> Implemented by WebGl renderer so it can render common world representation
-
-pub struct App {}
+pub struct App {
+    tree: LayoutTree,
+}
 
 impl App {
     pub fn new() -> App {
-        App {}
+        let mut tree = LayoutTree::new();
+        let widgets = Box::new(Positioned {
+            position: (30.0, 30.0).into(),
+            child: Box::new(Container {
+                size: (100.0, 100.0).into(),
+            })
+        });
+        //let widgets: Box<dyn Layout> = Box::new(Container {
+        //    size: (100.0, 100.0).into(),
+        //});
+        let root = widgets.layout(&mut tree);
+        let root_lbox = LayoutBox::from_child(root, Vector2::zero());
+        let root_id = tree.insert(root_lbox);
+        tree.set_root(Some(root_id));
+
+        App { tree }
     }
 }
 
 impl AppDriver for App {
-    fn tick(&mut self, _time: f32) -> Result<(), anyhow::Error> {
-        Ok(())
+    fn tick(&mut self, _time: f32) -> Result<LayoutTree, Error> {
+        Ok(self.tree.clone())
     }
 }

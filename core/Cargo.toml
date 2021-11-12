@@ -26,6 +26,7 @@ wee_alloc = { version = "0.4.5", optional = true }
 anyhow = "1.0.44"
 math = { path = "crates/math" }
 render = { path = "crates/render" }
+layout = { path = "crates/layout" }
 
 [dependencies.web-sys]
 version = "0.3.4"

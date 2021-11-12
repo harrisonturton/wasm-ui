@@ -1,6 +1,6 @@
 use web_sys::WebGlProgram;
 use anyhow::Error;
-use math::{Vector2, Vector3};
+use math::{Vector2, Vector3, Vector4};
 
 use super::WebGl;
 use super::MeshPainter;
@@ -24,8 +24,11 @@ void main() {
 const FRAGMENT_SHADER: &str = r#"
 precision mediump float;
 
+// Color of the rect
+uniform vec4 u_color;
+
 void main() {
-    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    gl_FragColor = u_color;
 }
 "#;
 
@@ -34,6 +37,7 @@ pub struct StandardShader {
     program: WebGlProgram,
 
     viewport: Vector2,
+    color: Vector4,
 }
 
 impl StandardShader {
@@ -42,15 +46,26 @@ impl StandardShader {
             VERTEX_SHADER,
             FRAGMENT_SHADER
         )?;
-        Ok(StandardShader { gl: Rc::clone(gl), program, viewport: Vector2::zero() })
+        Ok(StandardShader { 
+            gl: Rc::clone(gl),
+            program,
+            viewport: Vector2::zero(),
+            color: Vector4::new(1.0, 1.0, 1.0, 1.0),
+        })
     }
 
     pub fn set_viewport(&mut self, viewport: Vector2) {
         self.viewport = viewport;
     }
 
+    pub fn set_color(&mut self, color: Vector4) {
+        self.color = color;
+    }
+
     fn set_uniforms(&self) -> Result<(), Error> {
-        self.gl.set_uniform_vec2(&self.program, "u_viewport", self.viewport)
+        self.gl.set_uniform_vec2(&self.program, "u_viewport", self.viewport)?;
+        self.gl.set_uniform_vec4(&self.program, "u_color", self.color)?;
+        Ok(())
     }
 }
 

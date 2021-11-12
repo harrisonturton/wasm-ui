@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Error};
 use bytemuck::cast_slice;
 use js_sys::WebAssembly;
-use math::{Vector2, Vector3};
+use math::{Vector2, Vector3, Vector4};
 use wasm_bindgen::JsCast;
 use web_sys::{WebGlBuffer, WebGlProgram, WebGlRenderingContext, HtmlCanvasElement};
 
@@ -126,9 +126,25 @@ impl WebGl {
         let location = self
             .gl
             .get_uniform_location(program, field)
-            .ok_or_else(|| anyhow::anyhow!("could not get location for uniform {}", field))?;
+            .ok_or_else(|| anyhow::anyhow!("could not get location for uniform vec2 {}", field))?;
         let value: [f32; 2] = value.into();
         self.gl.uniform2fv_with_f32_array(Some(&location), &value);
+        Ok(())
+    }
+
+    pub fn set_uniform_vec4(
+        &self,
+        program: &WebGlProgram,
+        field: &str,
+        value: Vector4,
+    ) -> Result<(), Error> {
+        self.gl.use_program(Some(program));
+        let location = self
+            .gl
+            .get_uniform_location(program, field)
+            .ok_or_else(|| anyhow::anyhow!("could not get location for uniform vec4 {}", field))?;
+        let value: [f32; 4] = value.into();
+        self.gl.uniform4fv_with_f32_array(Some(&location), &value);
         Ok(())
     }
 

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 math = { path = "../math" }
+layout = { path = "../layout" }
 wasm-bindgen = "0.2.63"
 js-sys = "0.3.50"
 anyhow = "1.0.44"
