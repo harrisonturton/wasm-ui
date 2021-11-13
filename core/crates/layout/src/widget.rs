@@ -6,85 +6,35 @@ use std::fmt::Debug;
 // Flex
 // --------------------------------------------------
 
+#[derive(Copy, Clone, Debug)]
+pub enum CrossAxisAlignment {
+    Start,
+    End,
+    Stretch,
+    Center,
+}
+
+impl Default for CrossAxisAlignment {
+    fn default() -> CrossAxisAlignment {
+        CrossAxisAlignment::Start
+    }
+}
+
 #[derive(Debug)]
-pub struct Flex {
-    pub flex: Option<f32>,
-    pub child: Box<dyn Layout>,
+pub enum Flex {
+    Flexible { flex: f32, child: Box<dyn Layout> },
+    Fixed { child: Box<dyn Layout> },
 }
 
 // The [Flex] widget doesn't render any additional primitives. It just wraps an
 // existing widget in order to provide the `flex` property to the parent.
 impl Layout for Flex {
     fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
-        self.child.layout(tree, constraints)
-    }
-}
-
-// --------------------------------------------------
-// Row
-// --------------------------------------------------
-
-#[derive(Default, Debug)]
-pub struct Row {
-    pub children: Vec<Flex>,
-}
-
-impl Layout for Row {
-    fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
-        // First pass calculates the sum of the heights of inflexible children
-        // and the sum of all the flex factors. These are required for the flex
-        // layout.
-        let mut sum_inflexible_width = 0.0; 
-        let mut sum_flex_factor = 0.0;
-        let child_constraints = BoxConstraints {
-            min: Vector2::new(0.0, 0.0),
-            max: Vector2::new(f32::INFINITY, constraints.max.x),
+        let child = match self {
+            Flex::Flexible { child, .. } => child,
+            Flex::Fixed { child } => child,
         };
-        for widget in &self.children {
-            match widget.flex {
-                Some(flex) => {
-                    sum_flex_factor += flex;
-                },
-                None => {
-                    let sized = widget.layout(tree, &child_constraints);
-                    sum_inflexible_width += sized.size.x;
-                }
-            }
-        }
-        let free_space = constraints.max.x - sum_inflexible_width;
-        let space_per_flex = free_space / sum_flex_factor;
-
-        // Second pass performs the actual layout.
-        let mut x_pos = 0.0;
-        let mut children = vec![];
-        for widget in &self.children {
-            match widget.flex {
-                Some(flex) => {
-                    let flex_constraints = BoxConstraints {
-                        min: Vector2::new(flex * space_per_flex, 100.0),
-                        max: Vector2::new(flex * space_per_flex, constraints.max.y),
-                    };
-                    let sized = widget.layout(tree, &flex_constraints);
-                    let child = LayoutBox::from_child(sized, Vector2::new(x_pos, 0.0));
-                    let child_id = tree.insert(child);
-                    children.push(child_id);
-                    x_pos += flex * space_per_flex;
-                },
-                None => {
-                    let sized = widget.layout(tree, constraints);
-                    let child = LayoutBox::from_child(sized, Vector2::new(x_pos, 0.0));
-                    x_pos += child.rect.max.x - child.rect.min.x;
-                    let child_id = tree.insert(child);
-                    children.push(child_id);
-                },
-            }
-        }
-
-        SizedLayoutBox {
-            size: constraints.max,
-            children,
-            material: Material::Solid(Color::blue()),
-        }
+        child.layout(tree, constraints)
     }
 }
 
@@ -94,64 +44,118 @@ impl Layout for Row {
 
 #[derive(Default, Debug)]
 pub struct Column {
+    pub cross_axis_alignment: CrossAxisAlignment,
     pub children: Vec<Flex>,
+}
+
+impl Column {
+    fn fixed_constraints(&self, constraints: &BoxConstraints) -> BoxConstraints {
+        match self.cross_axis_alignment {
+            CrossAxisAlignment::Start | CrossAxisAlignment::End | CrossAxisAlignment::Center => BoxConstraints {
+                min: (0.0, 0.0).into(),
+                max: (constraints.max.x, f32::INFINITY).into(),
+            },
+            CrossAxisAlignment::Stretch => BoxConstraints {
+                min: (constraints.max.x, 0.0).into(),
+                max: (constraints.max.x, f32::INFINITY).into(),
+            },
+        }
+    }
+
+    fn flex_constraints(&self, constraints: &BoxConstraints, flex_height: f32) -> BoxConstraints {
+        match self.cross_axis_alignment {
+            CrossAxisAlignment::Start | CrossAxisAlignment::End | CrossAxisAlignment::Center => BoxConstraints {
+                min: (0.0, flex_height).into(),
+                max: (constraints.max.x, flex_height).into(),
+            },
+            CrossAxisAlignment::Stretch => BoxConstraints {
+                min: (constraints.max.x, flex_height).into(),
+                max: (constraints.max.x, flex_height).into(),
+            },
+        }
+    }
+
+    fn lbox_position(&self, constraints: &BoxConstraints, y_pos: f32, width: f32) -> Vector2 {
+        match self.cross_axis_alignment {
+            CrossAxisAlignment::Start | CrossAxisAlignment::Stretch => Vector2::new(0.0, y_pos),
+            CrossAxisAlignment::End => Vector2::new(constraints.max.x - width, y_pos),
+            CrossAxisAlignment::Center => Vector2::new(constraints.max.x * 0.5 - width * 0.5, y_pos),
+        }
+    }
 }
 
 impl Layout for Column {
     fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
-        // First pass calculates the sum of the heights of inflexible children
-        // and the sum of all the flex factors. These are required for the flex
-        // layout.
-        let mut sum_inflexible_height = 0.0; 
+        let mut sum_fixed_height = 0.0;
         let mut sum_flex_factor = 0.0;
-        let child_constraints = BoxConstraints {
-            min: Vector2::new(0.0, 0.0),
-            max: Vector2::new(constraints.max.x, f32::INFINITY),
-        };
-        for widget in &self.children {
-            match widget.flex {
-                Some(flex) => {
-                    sum_flex_factor += flex;
-                },
-                None => {
-                    let sized = widget.layout(tree, &child_constraints);
-                    sum_inflexible_height += sized.size.y;
+
+        // Keep track of the children that have already undergone layout
+        let mut sbox_cache: Vec<(&Flex, Option<SizedLayoutBox>)> = Vec::new();
+
+        // Layout the [Flex::Fixed] elements first, because we need to calculate
+        // the total size of inflexible children before we can calculate the
+        // relative sized of the flexible children
+        for child in &self.children {
+            match child {
+                Flex::Fixed { .. } => {
+                    let constraints = self.fixed_constraints(constraints);
+                    let sbox = child.layout(tree, &constraints);
+                    sum_fixed_height += sbox.size.y;
+                    sbox_cache.push((child, Some(sbox)));
                 }
-            }
+                Flex::Flexible { flex, .. } => {
+                    sum_flex_factor += flex;
+                    sbox_cache.push((child, None));
+                }
+            };
         }
-        let free_space = constraints.max.y - sum_inflexible_height;
+
+        // Now we can determine the relative sizing of the flexible widgets
+        let free_space = constraints.max.y - sum_fixed_height;
         let space_per_flex = free_space / sum_flex_factor;
 
-        // Second pass performs the actual layout.
-        let mut y_pos = 0.0;
-        let mut children = vec![];
-        for widget in &self.children {
-            match widget.flex {
-                Some(flex) => {
-                    let flex_constraints = BoxConstraints {
-                        min: Vector2::new(100.0, flex * space_per_flex),
-                        max: Vector2::new(constraints.max.x, flex * space_per_flex),
-                    };
-                    let sized = widget.layout(tree, &flex_constraints);
-                    let child = LayoutBox::from_child(sized, Vector2::new(0.0, y_pos));
-                    let child_id = tree.insert(child);
-                    children.push(child_id);
-                    y_pos += flex * space_per_flex;
+        let mut children = Vec::new();
+        let mut max_width = 0.0;  
+        let mut max_height = 0.0;
+        for (child, maybe_sbox) in sbox_cache {
+            match maybe_sbox {
+                // This is an inflexible widget that has already been laid out
+                Some(sbox) => {
+                    let size = sbox.size;
+                    let pos = self.lbox_position(constraints, max_height, sbox.size.x);
+                    let lbox = LayoutBox::from_child(sbox, pos);
+                    let id = tree.insert(lbox);
+                    children.push(id);
+                    max_width = f32::max(max_width, size.x);
+                    max_height += size.y;
                 },
-                None => {
-                    let sized = widget.layout(tree, constraints);
-                    let child = LayoutBox::from_child(sized, Vector2::new(0.0, y_pos));
-                    y_pos += child.rect.max.y - child.rect.min.y;
-                    let child_id = tree.insert(child);
-                    children.push(child_id);
+                // This is a flexible widget that must be laid out
+                None => match child {
+                    Flex::Fixed { .. } => (),
+                    Flex::Flexible { flex, .. } => {
+                        let height = flex * space_per_flex;
+                        let flex_constraints = self.flex_constraints(constraints, height);
+                        let sbox = child.layout(tree, &flex_constraints);
+                        let size = sbox.size;
+                        let pos = self.lbox_position(constraints, max_height, sbox.size.x);
+                        let lbox = LayoutBox::from_child(sbox, pos);
+                        let id = tree.insert(lbox);
+                        children.push(id);
+                        max_height += size.y;
+                        max_width = f32::max(max_width, size.x);
+                    },
                 },
-            }
+            };
         }
 
+        let size = match self.cross_axis_alignment {
+            CrossAxisAlignment::Start => Vector2::new(max_width, max_height),
+            _ => Vector2::new(constraints.max.x, max_height),
+        };
         SizedLayoutBox {
-            size: constraints.max,
+            size,
             children,
-            material: Material::Solid(Color::blue()),
+            material: Material::Solid(Color::green().alpha(0.5)),
         }
     }
 }
@@ -261,7 +265,7 @@ impl Layout for Container {
 // Decoration
 // --------------------------------------------------
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Material {
     None,
     Solid(Color),
