@@ -1,3 +1,4 @@
+use layout::BoxConstraints;
 use anyhow::Error;
 use std::collections::VecDeque;
 use std::rc::Rc;
@@ -68,12 +69,30 @@ impl BrowserDriver {
         let viewport = Vector2::new(width, height);
         self.shaders.standard.set_viewport(viewport);
 
-        let widgets = self.app.tick(time);
         let mut tree = LayoutTree::new();
-        let root = widgets.layout(&mut tree);
-        let root_lbox = LayoutBox::from_child(root, Vector2::zero());
+
+        let widgets = self.app.tick(time);
+        let root = widgets.layout(&mut tree, &BoxConstraints {
+            min: Vector2::zero(),
+            max: viewport,
+        });
+        let size = Vector2::new(
+            f32::min(root.size.x, viewport.x),
+            f32::min(root.size.y, viewport.y)
+        );
+        let rect = Rect::new(Vector2::zero(), size);
+        let root_lbox = LayoutBox {
+            rect,
+            children: root.children,
+            material: root.material,
+        };
         let root_id = tree.insert(root_lbox);
         tree.set_root(Some(root_id));
+
+        if time % 5000.0 < 50.0 {
+            super::util::log(&format!("{:?}", tree));
+        }
+        //super::util::log(&format!("{:?}", time));
 
         let mut parent_offsets = VecDeque::from([Vector2::zero()]);
         for lbox in tree.iter() {
@@ -81,7 +100,7 @@ impl BrowserDriver {
             let min = lbox.rect.min + offset;
             let max = lbox.rect.max + offset;
             let rect = Rect::new(min, max);
-            let color = match lbox.content.material {
+            let color = match lbox.material {
                 layout::Material::Solid(color) => color,
                 layout::Material::None => Color::transparent(),
             };
@@ -105,7 +124,6 @@ impl BrowserDriver {
         ];
         self.shaders.standard.set_color(color.to_linear());
         self.shaders.standard.paint_mesh(&vertices)?;
-
         Ok(())
     }
 

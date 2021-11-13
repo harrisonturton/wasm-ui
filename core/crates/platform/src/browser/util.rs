@@ -14,6 +14,15 @@ extern "C" {
     pub fn error(s: &str);
 }
 
+// The JS object passsed into the [get_context_with_context_options]
+// WebGlRenderingContext constructor. For some reason cargo sees this as dead
+// code.
+#[wasm_bindgen]
+struct WebGlOptions {
+    #[allow(dead_code)]
+    premultiplied_alpha: bool
+}
+
 /// Try to get a reference to the [WebGlCanvasElement] identified by the provided ID.
 pub fn try_get_canvas(canvas_id: &str) -> Result<HtmlCanvasElement, Error> {
     let window = web_sys::window().ok_or_else(|| anyhow!("could not get window"))?;
@@ -29,8 +38,13 @@ pub fn try_get_canvas(canvas_id: &str) -> Result<HtmlCanvasElement, Error> {
 
 /// Try to get a [WebGlRenderingContext] from a reference to a [HtmlCanvasElement].
 pub fn try_get_webgl_context(canvas: &HtmlCanvasElement) -> Result<WebGlRenderingContext, Error> {
+    let options = WebGlOptions {
+        // This is needed otherwise semi-transparent colors are assumed to have
+        // transparency multiplied into their color, and are rendered weirdly.
+        premultiplied_alpha: false
+    };
     canvas
-        .get_context("webgl")
+        .get_context_with_context_options("webgl", &options.into())
         .map_err(|_| anyhow::anyhow!("could not get webgl context"))?
         .ok_or_else(|| anyhow::anyhow!("could not get webgl context"))?
         .dyn_into::<WebGlRenderingContext>()

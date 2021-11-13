@@ -1,4 +1,4 @@
-use super::{Layout, LayoutBox, LayoutTree, RenderBox, SizedLayoutBox};
+use super::{Layout, LayoutBox, LayoutTree, SizedLayoutBox, BoxConstraints};
 use math::{Vector2, Vector4};
 use std::fmt::Debug;
 
@@ -9,35 +9,39 @@ pub struct Positioned {
 }
 
 impl Layout for Positioned {
-    fn layout(&self, tree: &mut LayoutTree) -> SizedLayoutBox {
-        let child = self.child.layout(tree);
-        let size = self.position + child.size;
+    fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
+        let max_child_size = constraints.max - self.position;
+        let child = self.child.layout(tree, &BoxConstraints {
+            min: constraints.min,
+            max: max_child_size,
+        });
 
         let child_lbox = LayoutBox::from_child(child, self.position);
         let child_id = tree.insert(child_lbox);
         SizedLayoutBox {
-            size,
+            size: constraints.max,
             children: vec![child_id],
-            content: RenderBox {
-                material: Material::Solid(Color::green()),
-            },
+            material: Material::Solid(Color::transparent()),
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct Container {
     pub size: Vector2,
+    pub color: Option<Color>,
 }
 
 impl Layout for Container {
-    fn layout(&self, _: &mut LayoutTree) -> SizedLayoutBox {
+    fn layout(&self, _: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
+        let size = self.size.clamp_between(constraints.min, constraints.max);
         SizedLayoutBox {
-            size: self.size,
+            size,
             children: vec![],
-            content: RenderBox {
-                material: Material::Solid(Color::blue()),
-            },
+            material: Material::Solid(match self.color {
+                Some(color) => color,
+                None => Color::red(),
+            }),
         }
     }
 }
@@ -55,6 +59,12 @@ pub struct Color {
     pub g: f32,
     pub b: f32,
     pub a: f32,
+}
+
+impl Default for Color {
+    fn default() -> Color {
+        Color::transparent()
+    }
 }
 
 impl Color {
@@ -80,6 +90,10 @@ impl Color {
 
     pub fn white() -> Color {
         Color::rgba(255.0, 255.0, 255.0, 255.0)
+    }
+
+    pub fn alpha(self, a: f32) -> Color {
+        Color::rgba(self.r, self.g, self.b, a)
     }
 
     pub fn to_linear(&self) -> Vector4 {

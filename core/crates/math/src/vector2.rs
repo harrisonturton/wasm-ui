@@ -14,7 +14,7 @@ macro_rules! vector2 {
 
 /// A 2-dimensional vector.
 #[repr(C)]
-#[derive(PartialEq, Copy, Clone, Debug, Pod, Zeroable)]
+#[derive(PartialOrd, PartialEq, Copy, Clone, Debug, Pod, Zeroable)]
 pub struct Vector2 {
     /// The x component of the vector.
     pub x: f32,
@@ -130,6 +130,19 @@ impl Vector2 {
         } else {
             self.y
         }
+    }
+
+    // Clamp the x and y components between the bounds of another Vector
+    pub fn clamp(self, bounds: Vector2) -> Vector2 {
+        Vector2::new(
+            self.x.clamp(bounds.x, bounds.y),
+            self.y.clamp(bounds.x, bounds.y))
+    }
+
+    pub fn clamp_between(self, min: Vector2, max: Vector2) -> Vector2 {
+        Vector2::new(
+            self.x.clamp(min.x, max.x),
+            self.y.clamp(min.y, max.y))
     }
 }
 
