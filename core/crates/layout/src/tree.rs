@@ -41,7 +41,7 @@ pub struct SizedLayoutBox {
 }
 
 /// An element that has finished layout. It has been been sized and positioned.
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct LayoutBox {
     pub rect: Rect,
     pub children: Vec<LayoutBoxId>,
@@ -118,6 +118,10 @@ impl LayoutTree {
     pub fn iter(&self) -> LayoutTreeIterator {
         LayoutTreeIterator {
             tree: self,
+            parents: match self.root {
+                Some(root) => VecDeque::from([root]),
+                None => VecDeque::new(),
+            },
             remaining: match self.root {
                 Some(root) => VecDeque::from([root]),
                 None => VecDeque::new(),
@@ -128,19 +132,23 @@ impl LayoutTree {
 
 pub struct LayoutTreeIterator<'a> {
     tree: &'a LayoutTree,
+    parents: VecDeque<LayoutBoxId>,
     remaining: VecDeque<LayoutBoxId>,
 }
 
 impl<'a> Iterator for LayoutTreeIterator<'a> {
-    type Item = &'a LayoutBox;
+    type Item = (&'a LayoutBox, &'a LayoutBox);
 
-    fn next(&mut self) -> Option<&'a LayoutBox> {
-        let next_id = self.remaining.pop_front()?;
-        let lbox = self.tree.get(next_id)?;
-        for child in &lbox.children {
+    fn next(&mut self) -> Option<(&'a LayoutBox, &'a LayoutBox)> {
+        let parent_id = self.parents.pop_front()?;
+        let child_id = self.remaining.pop_front()?;
+        let parent = self.tree.get(parent_id)?;
+        let child = self.tree.get(child_id)?;
+        for child in &child.children {
+            self.parents.push_back(child_id);
             self.remaining.push_back(*child);
         }
-        Some(lbox)
+        Some((parent, child))
     }
 }
 
@@ -184,8 +192,12 @@ mod tests {
         let c_id = tree.insert(c.clone());
         tree.set_root(Some(c_id));
 
-        let actual: Vec<_> = tree.iter().cloned().collect();
-        let expected = vec![c, a, b, a_child, b_child];
+        let mut actual = vec![];
+        for item in tree.iter() {
+            actual.push(item);
+        }
+
+        let expected = vec![(&c, &c), (&c, &a), (&c, &b), (&a, &a_child), (&b, &b_child)];
         for (i, _) in actual.iter().enumerate() {
             assert_eq!(expected[i], actual[i])
         }

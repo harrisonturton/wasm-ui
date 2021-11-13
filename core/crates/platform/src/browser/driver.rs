@@ -1,5 +1,5 @@
-use layout::BoxConstraints;
 use anyhow::Error;
+use layout::BoxConstraints;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -72,13 +72,16 @@ impl BrowserDriver {
         let mut tree = LayoutTree::new();
 
         let widgets = self.app.tick(time);
-        let root = widgets.layout(&mut tree, &BoxConstraints {
-            min: Vector2::zero(),
-            max: viewport,
-        });
+        let root = widgets.layout(
+            &mut tree,
+            &BoxConstraints {
+                min: Vector2::zero(),
+                max: viewport,
+            },
+        );
         let size = Vector2::new(
             f32::min(root.size.x, viewport.x),
-            f32::min(root.size.y, viewport.y)
+            f32::min(root.size.y, viewport.y),
         );
         let rect = Rect::new(Vector2::zero(), size);
         let root_lbox = LayoutBox {
@@ -94,18 +97,16 @@ impl BrowserDriver {
         }
         //super::util::log(&format!("{:?}", time));
 
-        let mut parent_offsets = VecDeque::from([Vector2::zero()]);
-        for lbox in tree.iter() {
-            let offset = parent_offsets.pop_front().unwrap();
-            let min = lbox.rect.min + offset;
-            let max = lbox.rect.max + offset;
+        for (parent, child) in tree.iter() {
+            let offset = parent.rect.min;
+            let min = child.rect.min + offset;
+            let max = child.rect.max + offset;
             let rect = Rect::new(min, max);
-            let color = match lbox.material {
+            let color = match child.material {
                 layout::Material::Solid(color) => color,
                 layout::Material::None => Color::transparent(),
             };
             self.draw_rect(rect, color)?;
-            parent_offsets.push_front(min);
         }
 
         Ok(())

@@ -1,9 +1,15 @@
-use layout::{Container, Layout, Positioned, Color};
+use layout::{Color, Container, Layout, Positioned, Stack};
 use math::Vector2;
 use platform::AppDriver;
 
 pub struct App {
     position: Vector2,
+}
+
+impl AppDriver for App {
+    fn tick(&mut self, time: f32) -> Box<dyn Layout> {
+        self.render_boxes(time)
+    }
 }
 
 impl App {
@@ -18,8 +24,61 @@ impl App {
             position: Vector2::zero(),
             child: Box::new(Container {
                 color: Some(Color::rgba(0.0, 0.0, 0.0, 50.0)),
-                size: (150.0, f32::INFINITY).into(),
-            })
+                size: Some((150.0, f32::INFINITY).into()),
+                ..Default::default()
+            }),
+        })
+    }
+
+    // 5 boxes should be placed directly next to eachother in a row. This tests
+    // for bugs in how the layout algorithm positions widgets relative to their
+    // parent, specifically when there are multiple independently-positioned
+    // widgets that are laid out in a row. 
+    #[allow(dead_code)]
+    fn render_boxes(&self, _: f32) -> Box<dyn Layout> {
+        Box::new(Stack {
+            children: vec![
+                Positioned {
+                    position: (0.0, 0.0).into(),
+                    child: Box::new(Container {
+                        size: Some((100.0, 100.0).into()),
+                        color: Some(Color::green()),
+                        ..Default::default()
+                    }),
+                },
+                Positioned {
+                    position: (100.0, 0.0).into(),
+                    child: Box::new(Container {
+                        size: Some((100.0, 100.0).into()),
+                        color: Some(Color::red()),
+                        ..Default::default()
+                    }),
+                },
+                Positioned {
+                    position: (200.0, 0.0).into(),
+                    child: Box::new(Container {
+                        size: Some((100.0, 100.0).into()),
+                        color: Some(Color::blue()),
+                        ..Default::default()
+                    }),
+                },
+                Positioned {
+                    position: (300.0, 0.0).into(),
+                    child: Box::new(Container {
+                        size: Some((100.0, 100.0).into()),
+                        color: Some(Color::red()),
+                        ..Default::default()
+                    }),
+                },
+                Positioned {
+                    position: (400.0, 0.0).into(),
+                    child: Box::new(Container {
+                        size: Some((100.0, 100.0).into()),
+                        color: Some(Color::green()),
+                        ..Default::default()
+                    }),
+                },
+            ]
         })
     }
 
@@ -36,14 +95,9 @@ impl App {
             position: self.position,
             child: Box::new(Container {
                 color: Some(Color::rgba(0.0, 0.0, 0.0, 50.0)),
-                size: (100.0, 100.0).into(),
+                size: Some((100.0, 100.0).into()),
+                ..Default::default()
             }),
         })
-    }
-}
-
-impl AppDriver for App {
-    fn tick(&mut self, time: f32) -> Box<dyn Layout> {
-        self.render_moving_box(time)
     }
 }

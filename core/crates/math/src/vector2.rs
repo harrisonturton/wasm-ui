@@ -136,13 +136,12 @@ impl Vector2 {
     pub fn clamp(self, bounds: Vector2) -> Vector2 {
         Vector2::new(
             self.x.clamp(bounds.x, bounds.y),
-            self.y.clamp(bounds.x, bounds.y))
+            self.y.clamp(bounds.x, bounds.y),
+        )
     }
 
     pub fn clamp_between(self, min: Vector2, max: Vector2) -> Vector2 {
-        Vector2::new(
-            self.x.clamp(min.x, max.x),
-            self.y.clamp(min.y, max.y))
+        Vector2::new(self.x.clamp(min.x, max.x), self.y.clamp(min.y, max.y))
     }
 }
 

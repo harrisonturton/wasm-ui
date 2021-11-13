@@ -16,6 +16,13 @@ impl Rect {
         Self { min, max }
     }
 
+    pub fn zero() -> Self {
+        Self {
+            min: Vector2::zero(),
+            max: Vector2::zero(),
+        }
+    }
+
     /// Get the width and height of the rectangle.
     #[inline]
     pub fn size(self) -> Vector2 {
