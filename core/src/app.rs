@@ -1,6 +1,6 @@
 use layout::{
     Color, Column, Container, CrossAxisAlignment, Flex, Layout, MainAxisAlignment, Positioned,
-    Stack,
+    Stack, Row,
 };
 use math::Vector2;
 use platform::AppDriver;
@@ -11,7 +11,7 @@ pub struct App {
 
 impl AppDriver for App {
     fn tick(&mut self, time: f32) -> Box<dyn Layout> {
-        self.render_space_around(time)
+        self.render_space_around_row(time)
     }
 }
 
@@ -22,7 +22,41 @@ impl App {
     }
 
     #[allow(dead_code)]
-    fn render_space_around(&self, _time: f32) -> Box<dyn Layout> {
+    fn render_space_around_row(&self, _time: f32) -> Box<dyn Layout> {
+        Box::new(Row {
+            main_axis_alignment: MainAxisAlignment::SpaceEvenly,
+            cross_axis_alignment: CrossAxisAlignment::End,
+            children: vec![
+                Flex::Fixed {
+                    child: Box::new(Container {
+                        size: (100.0, 200.0).into(),
+                        color: Color::green(),
+                        ..Default::default()
+                    }),
+                },
+                Flex::Flexible {
+                    flex: 1.0,
+                    child: Box::new(Container {
+                        size: (100.0, 100.0).into(),
+                        color: Color::red(),
+                        ..Default::default()
+                    }),
+                },
+                Flex::Fixed {
+                    child: Box::new(Container {
+                        size: (100.0, 100.0).into(),
+                        color: Color::blue(),
+                        ..Default::default()
+                    }),
+                },
+            ],
+            ..Default::default()
+        })
+    }
+
+
+    #[allow(dead_code)]
+    fn render_space_around_column(&self, _time: f32) -> Box<dyn Layout> {
         Box::new(Column {
             main_axis_alignment: MainAxisAlignment::SpaceEvenly,
             cross_axis_alignment: CrossAxisAlignment::End,
