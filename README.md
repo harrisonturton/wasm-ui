@@ -1,22 +1,66 @@
-# 🖼 wasm-ui
+# `wasm-ui`
 
-Heyo, welcome to my little project. This is my attempt to build a web
-application with Rust. Instead of using HTML+CSS like a normal person, I want to
-build everything using WebGL. 
+Hey! Welcome to my little experiment. It's a Rust library for building user interfaces on the web. You write the interface in Rust, and `wasm-ui` compiles it to WebAssembly and renders to a [WebGL canvas](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API).
 
-It's painful. It's not super efficient. But it's a fun and interesting
-challenge.
+See the [roadmap](#roadmap) for more info. Today, the library implements a box model, flex layout, and can render rectangles of single colors.
 
-Basically nothing works yet.
+**Why am I building this?**
+
+* Building the library is fun. Kinda. It's equal parts pain and enjoyment.
+* I was curious about how [Figma](https://www.figma.com/blog/webassembly-cut-figmas-load-time-by-3x/) and [Google Docs](https://workspaceupdates.googleblog.com/2021/05/Google-Docs-Canvas-Based-Rendering-Update.html) use WebGL for their interfaces.
+* WebAssembly can reduce the load time of certain web applications.
+* In theory, it could be ported to native platforms without the overhead of webviews components like Electron or Cordova.
+
+**Why should you be skeptical?**
+
+There are quite a lot of hurdles to overcome. These are the big ones:
+
+* This is (very) hard to build. I'm effectively rebuilding the layout + render pipeline of a browser.
+* It's harder to use and doesn't interop nicely with existing Javascript libraries.
+* Most websites won't benefit from it.
+
+Again, this is an experiment. Very little works yet, but I still think it's pretty cool. Thanks for checking it out ❤️
 
 ## Usage
 
-I personally find Flutter really nice to use, so I've tried to design this
-interface to be fairly similar. It's a bit more verbose due to Rust's
-explicitness, but still readable.
+This library isn't distributed yet. If you want to use it, you have to clone it and write code in the `core/src` directory. I've already written the boilerplate, and the library code lives in the `core/crates` subdirectory.
 
-I'm hoping to eventually write a procedural macro to make writing the widget
-tree a bit nicer.
+The following commands will clone the project, build it, and begin serving the demo application on `localhost:8080`:
+
+```bash
+$ git clone https://github.com/harrisonturton/wasm-ui.git
+$ cd wasm-ui && ./bin/build
+$ ./bin/start
+```
+
+## Roadmap
+
+### Figuring out what's possible
+
+These are messy one-off experiments to make sure I can actually build
+everything.
+
+- [x] Build + deploy Rust on the web
+- [x] Control a WebGL canvas with Rust
+- [x] Render glyphs from a font
+- [x] Implement a basic box layout algorithm (based on Flutter + CSS box model)
+- [x] Pass browser events to the Rust library (cross the JS-WASM boundary)
+
+### Actual Roadmap
+
+Now that I've finished with the little experiments, I'm confident that building
+the UI library is *possible*. Not easy, but possible. The current challenge is
+to combine all the individual spike projects, ideally with some half-decent
+architecture.
+
+- [x] Build WebGL render driver
+- [x] Build data structure to represent the UI
+- [x] Implement box layout algorithm
+- [x] Implement flex layout
+- [ ] Write layout tests 🙈
+- [ ] Add box styles
+
+## Documentation
 
 ### Minimal working web example
 
@@ -163,36 +207,12 @@ red and blue squares to the edges of the screen.
 
 ## Roadmap
 
-### Figuring out what's possible
-
-These are messy one-off experiments to make sure I can actually build
-everything.
-
-- [x] Build + deploy Rust on the web
-- [x] Control a WebGL canvas with Rust
-- [x] Render glyphs from a font
-- [x] Implement a basic box layout algorithm (based on Flutter + CSS box model)
-- [x] Pass browser events to the Rust library (cross the JS-WASM boundary)
-
-### Actual Roadmap
-
-Now that I've finished with the little experiments, I'm confident that building
-the UI library is *possible*. Not easy, but possible. The current challenge is
-to combine all the individual spike projects, ideally with some half-decent
-architecture.
-
-- [ ] Build WebGL render driver
-- [ ] Build data structure to represent the UI
-- [ ] Implement box layout algorithm
-
-Maybe I should write an article for each roadmap item 🤔
-
 ## The codebase
 
 `core/` is the Rust implementation. This gets compiled to WASM and async loaded
 in the browser.
 
-`core/crates/render` implements the rendering logic and app drivers. The drivers
+`core/crates/platform` implements the platform-specific rendering logic and app drivers. The drivers
 sit between the application logic and the deploy target. For instance, the
 browser driver translates browser events into something the application can
 understand. It also takes the render primitive output of the application and
