@@ -166,7 +166,10 @@ impl Layout for Column {
             _ => constraints.max.x,
         };
         let size = match self.main_axis_size {
-            MainAxisSize::Min => Vector2::new(size_x, total_height.clamp(constraints.min.y, constraints.max.y)),
+            MainAxisSize::Min => Vector2::new(
+                size_x,
+                total_height.clamp(constraints.min.y, constraints.max.y),
+            ),
             MainAxisSize::Max => Vector2::new(size_x, constraints.max.y),
         };
 

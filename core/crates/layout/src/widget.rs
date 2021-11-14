@@ -65,6 +65,29 @@ impl Layout for Flex {
 }
 
 // --------------------------------------------------
+// Center
+// --------------------------------------------------
+
+#[derive(Debug)]
+pub struct Center {
+    pub child: Box<dyn Layout>,
+}
+
+impl Layout for Center {
+    fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
+        let sbox = self.child.layout(tree, constraints);
+        let pos = (constraints.max / 2.0) - (sbox.size / 2.0);
+        let lbox = LayoutBox::from_child(sbox, pos);
+        let id = tree.insert(lbox);
+        SizedLayoutBox {
+            size: constraints.max,
+            children: vec![id],
+            material: Material::None,
+        }
+    }
+}
+
+// --------------------------------------------------
 // Row
 // --------------------------------------------------
 
@@ -414,7 +437,7 @@ impl Layout for Container {
                     max: Vector2::new(
                         desired_max.x.clamp(constraints.min.x, constraints.max.x),
                         desired_max.y.clamp(constraints.min.y, constraints.max.y),
-                    )
+                    ),
                 };
                 let sbox = child.layout(tree, &child_constraints);
                 let child_size = sbox.size;
@@ -430,13 +453,15 @@ impl Layout for Container {
                 let child = Rect {
                     size: Vector2::new(
                         self.size.x.clamp(constraints.min.x, constraints.max.x),
-                        self.size.y.clamp(constraints.min.y, constraints.max.y)
+                        self.size.y.clamp(constraints.min.y, constraints.max.y),
                     ),
                     color: self.color,
                 };
                 let size = Vector2::new(
-                    (self.size.x + self.margin.left + self.margin.right).clamp(constraints.min.x, constraints.max.x),
-                    (self.size.y + self.margin.top + self.margin.bottom).clamp(constraints.min.y, constraints.max.y),
+                    (self.size.x + self.margin.left + self.margin.right)
+                        .clamp(constraints.min.x, constraints.max.x),
+                    (self.size.y + self.margin.top + self.margin.bottom)
+                        .clamp(constraints.min.y, constraints.max.y),
                 );
                 let sbox = child.layout(tree, constraints);
                 let lbox = LayoutBox::from_child(sbox, self.margin.min());
@@ -460,7 +485,10 @@ pub struct Rect {
 impl Layout for Rect {
     fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
         SizedLayoutBox {
-            size: Vector2::new(self.size.x.clamp(constraints.min.x, constraints.max.x), self.size.y.clamp(constraints.min.y, constraints.max.y)),
+            size: Vector2::new(
+                self.size.x.clamp(constraints.min.x, constraints.max.x),
+                self.size.y.clamp(constraints.min.y, constraints.max.y),
+            ),
             children: vec![],
             material: Material::Solid(self.color),
         }
