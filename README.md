@@ -10,6 +10,7 @@ See the [roadmap](#roadmap) for more info. Today, the library implements a box m
 * I was curious about how [Figma](https://www.figma.com/blog/webassembly-cut-figmas-load-time-by-3x/) and [Google Docs](https://workspaceupdates.googleblog.com/2021/05/Google-Docs-Canvas-Based-Rendering-Update.html) use WebGL for their interfaces.
 * WebAssembly can reduce the load time of certain web applications.
 * In theory, it could be ported to native platforms without the overhead of webviews components like Electron or Cordova.
+* There's potential for GPU-accelerating drawing.
 
 **Why should you be skeptical?**
 
