@@ -17,6 +17,7 @@ There are quite a lot of hurdles to overcome. These are the big ones:
 
 * This is (very) hard to build. I'm effectively rebuilding the layout + render pipeline of a browser.
 * It's harder to use and doesn't interop nicely with existing Javascript libraries.
+* Accessibility must be built from scratch using a parallel DOM structure in order for the browser to generate the [accessibility tree.](https://developer.mozilla.org/en-US/docs/Glossary/Accessibility_tree)
 * Most websites won't benefit from it.
 
 Again, this is an experiment. Very little works yet, but I still think it's pretty cool. Thanks for checking it out ❤️
@@ -204,8 +205,6 @@ Then it will expand to fill the screen in the horizontal direction, pushing the
 red and blue squares to the edges of the screen.
 
 <img width="1074" alt="Screen Shot 2021-11-14 at 2 11 15 pm" src="https://user-images.githubusercontent.com/20736299/141665968-8d6606e5-bb8b-4a8d-9df4-7e80c0a1a240.png">
-
-## Roadmap
 
 ## The codebase
 
