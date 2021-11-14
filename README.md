@@ -9,6 +9,116 @@ challenge.
 
 Basically nothing works yet.
 
+## Usage
+
+I personally find Flutter really nice to use, so I've tried to design this
+interface to be fairly similar. It's a bit more verbose due to Rust's
+explicitness, but still readable.
+
+I'm hoping to eventually write a procedural macro to make writing the widget
+tree a bit nicer.
+
+### App Boilerplate
+
+The library only requires that your application implements the `AppDriver`
+trait. This allows your app to be "driven" by a variety of different platforms.
+
+```rust
+pub trait AppDriver {
+    fn tick(&mut self, time: f32) -> Box<dyn Layout>;
+}
+```
+
+This is called every frame. The `Layout` trait is implemented by widgets that
+can be rendered by the `wasm-ui` library. For example, a simple app might look
+like:
+
+```rust
+pub struct App {
+    position: (f32, f32),
+}
+
+impl AppDriver for App {
+    fn tick(&mut self, time: f32) -> Box<dyn Layout> {
+        Box::new(Container {
+            size: (100.0, 100.0).into(),
+            color: Color::blue(),
+            ..Default::default()
+        })
+    }
+}
+```
+
+This will render a blue square that is 100 pixels wide and 100 pixels tall.
+
+Note the usage of `Default::default()`. This allows us to only define the fields
+we need, rather than being forced to specify every single in a widget. In this case, `Container` is defined like this:
+
+```rust
+pub struct Container {
+    pub size: Vector2,
+    pub color: Color,
+    pub child: Option<Box<dyn Layout>>,
+}
+```
+
+By using `..Default::default()`, it automatically sets `Container.child` to
+`None`. In this example it doesn't help us too much, but it's more useful with
+widgets that are highly configurable.
+
+### Flex Containers
+
+`wasm-ui` has two main flex containers, `Row` and `Column`.
+
+```rust
+Box::new(Row {
+    cross_axis_alignment: CrossAxisAlignment::Center,
+    main_axis_alignment: MainAxisAlignment::SpaceEvenly,
+    children: vec![
+        Flex::Fixed {
+            child: Box::new(Container{
+                size: (100.0, 100.0).into(),
+                color: Color::red(),
+                ..Default::default()
+            }),
+        },
+        Flex::Fixed {
+            child: Box::new(Container{
+                size: (100.0, 100.0).into(),
+                color: Color::green(),
+                ..Default::default()
+            }),
+        },
+        Flex::Fixed {
+            child: Box::new(Container{
+                size: (100.0, 100.0).into(),
+                color: Color::blue(),
+                ..Default::default()
+            }),
+        },
+    ]
+})
+```
+
+This will position three squares – red, green and blue – horizontally in the
+center of the screen.
+
+If we change the green square to this:
+
+```rust
+Flex::Flexible {
+    flex: 1.0,
+    child: Box::new(Container{
+        size: (100.0, 100.0).into(),
+        color: Color::green(),
+        ..Default::default()
+    }),
+},
+```
+
+Then it will expand to fill the screen in the horizontal direction, pushing the
+red and blue squares to the edges of the screen.
+
 ## Roadmap
 
 ### Figuring out what's possible
