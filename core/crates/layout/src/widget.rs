@@ -283,11 +283,21 @@ impl Layout for Positioned {
 // Container
 // --------------------------------------------------
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct Container {
-    pub size: Option<Vector2>,
-    pub color: Option<Color>,
+    pub size: Vector2,
+    pub color: Color,
     pub child: Option<Box<dyn Layout>>,
+}
+
+impl Default for Container {
+    fn default() -> Container {
+        Container {
+            size: Vector2::new(f32::INFINITY, f32::INFINITY),
+            color: Color::transparent(),
+            child: None,
+        }
+    }
 }
 
 impl Layout for Container {
@@ -301,22 +311,15 @@ impl Layout for Container {
                 SizedLayoutBox {
                     size,
                     children: vec![child_id],
-                    material: match self.color {
-                        Some(color) => Material::Solid(color),
-                        None => Material::None,
-                    },
+                    material: Material::Solid(self.color),
                 }
             }
             None => {
-                let size = self.size.unwrap_or_default();
-                let size = size.clamp_between(constraints.min, constraints.max);
+                let size = self.size.clamp_between(constraints.min, constraints.max);
                 SizedLayoutBox {
                     size,
                     children: vec![],
-                    material: match self.color {
-                        Some(color) => Material::Solid(color),
-                        None => Material::None,
-                    },
+                    material: Material::Solid(self.color),
                 }
             }
         }

@@ -11,7 +11,7 @@ pub struct App {
 
 impl AppDriver for App {
     fn tick(&mut self, time: f32) -> Box<dyn Layout> {
-        self.render_space_between(time)
+        self.render_space_around(time)
     }
 }
 
@@ -22,27 +22,34 @@ impl App {
     }
 
     #[allow(dead_code)]
-    fn render_space_between(&self, _time: f32) -> Box<dyn Layout> {
+    fn render_space_around(&self, _time: f32) -> Box<dyn Layout> {
         Box::new(Column {
-            main_axis_alignment: MainAxisAlignment::SpaceAround,
-            cross_axis_alignment: CrossAxisAlignment::Start,
+            main_axis_alignment: MainAxisAlignment::SpaceEvenly,
+            cross_axis_alignment: CrossAxisAlignment::End,
             children: vec![
-                Flex::Flexible {
-                    flex: 1.0,
+                Flex::Fixed {
                     child: Box::new(Container {
-                        size: Some((100.0, 100.0).into()),
-                        color: Some(Color::green()),
+                        size: (100.0, 100.0).into(),
+                        color: Color::green(),
                         ..Default::default()
                     }),
                 },
                 Flex::Fixed {
                     child: Box::new(Container {
-                        size: Some((100.0, 100.0).into()),
-                        color: Some(Color::red()),
+                        size: (100.0, 100.0).into(),
+                        color: Color::red(),
+                        ..Default::default()
+                    }),
+                },
+                Flex::Fixed {
+                    child: Box::new(Container {
+                        size: (100.0, 100.0).into(),
+                        color: Color::blue(),
                         ..Default::default()
                     }),
                 },
             ],
+            ..Default::default()
         })
     }
 
@@ -58,8 +65,8 @@ impl App {
                 child: Box::new(Positioned {
                     position: (200.0, 200.0).into(),
                     child: Box::new(Container {
-                        color: Some(Color::green()),
-                        size: Some((100.0, 100.0).into()),
+                        color: Color::green(),
+                        size: (100.0, 100.0).into(),
                         ..Default::default()
                     }),
                 }),
@@ -83,8 +90,8 @@ impl App {
                                 cross_axis_alignment: CrossAxisAlignment::Start,
                                 children: vec![Flex::Fixed {
                                     child: Box::new(Container {
-                                        size: Some((200.0, 25.0).into()),
-                                        color: Some(Color::black().alpha(0.25)),
+                                        size: (200.0, 25.0).into(),
+                                        color: Color::black().alpha(0.25),
                                         child: None,
                                     }),
                                 }],
@@ -93,15 +100,15 @@ impl App {
                         Flex::Flexible {
                             flex: 1.0,
                             child: Box::new(Container {
-                                size: Some((100.0, 100.0).into()),
-                                color: Some(Color::green()),
+                                size: (100.0, 100.0).into(),
+                                color: Color::green(),
                                 ..Default::default()
                             }),
                         },
                         Flex::Fixed {
                             child: Box::new(Container {
-                                size: Some(Vector2::new(100.0, 100.0)),
-                                color: Some(Color::red()),
+                                size: Vector2::new(100.0, 100.0),
+                                color: Color::red(),
                                 child: None,
                             }),
                         },
@@ -116,8 +123,8 @@ impl App {
         Box::new(Positioned {
             position: Vector2::zero(),
             child: Box::new(Container {
-                color: Some(Color::rgba(0.0, 0.0, 0.0, 50.0)),
-                size: Some((150.0, f32::INFINITY).into()),
+                color: Color::rgba(0.0, 0.0, 0.0, 50.0),
+                size: (150.0, f32::INFINITY).into(),
                 ..Default::default()
             }),
         })
@@ -134,40 +141,40 @@ impl App {
                 Positioned {
                     position: (0.0, 0.0).into(),
                     child: Box::new(Container {
-                        size: Some((100.0, 100.0).into()),
-                        color: Some(Color::green()),
+                        size: (100.0, 100.0).into(),
+                        color: Color::green(),
                         ..Default::default()
                     }),
                 },
                 Positioned {
                     position: (100.0, 0.0).into(),
                     child: Box::new(Container {
-                        size: Some((100.0, 100.0).into()),
-                        color: Some(Color::red()),
+                        size: (100.0, 100.0).into(),
+                        color: Color::red(),
                         ..Default::default()
                     }),
                 },
                 Positioned {
                     position: (200.0, 0.0).into(),
                     child: Box::new(Container {
-                        size: Some((100.0, 100.0).into()),
-                        color: Some(Color::blue()),
+                        size: (100.0, 100.0).into(),
+                        color: Color::blue(),
                         ..Default::default()
                     }),
                 },
                 Positioned {
                     position: (300.0, 0.0).into(),
                     child: Box::new(Container {
-                        size: Some((100.0, 100.0).into()),
-                        color: Some(Color::red()),
+                        size: (100.0, 100.0).into(),
+                        color: Color::red(),
                         ..Default::default()
                     }),
                 },
                 Positioned {
                     position: (400.0, 0.0).into(),
                     child: Box::new(Container {
-                        size: Some((100.0, 100.0).into()),
-                        color: Some(Color::green()),
+                        size: (100.0, 100.0).into(),
+                        color: Color::green(),
                         ..Default::default()
                     }),
                 },
@@ -187,8 +194,8 @@ impl App {
         Box::new(Positioned {
             position: self.position,
             child: Box::new(Container {
-                color: Some(Color::rgba(0.0, 0.0, 0.0, 50.0)),
-                size: Some((100.0, 100.0).into()),
+                color: Color::rgba(0.0, 0.0, 0.0, 50.0),
+                size: (100.0, 100.0).into(),
                 ..Default::default()
             }),
         })
