@@ -18,6 +18,42 @@ explicitness, but still readable.
 I'm hoping to eventually write a procedural macro to make writing the widget
 tree a bit nicer.
 
+### Minimal working web example
+
+```rust
+use platform::browser::BrowserDriver;
+use wasm_bindgen::prelude::wasm_bindgen;
+
+// Use `wee_alloc` as the global allocator, because it is smaller.
+#[cfg(feature = "wee_alloc")]
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+/// This is called from the browser as soon as the WASM package is loaded. It is
+/// the main entrypoint to the application.
+#[wasm_bindgen]
+pub fn start(canvas_id: &str) -> BrowserDriver {
+    // Forward panic messages to console.error
+    #[cfg(feature = "console_error_panic_hook")]
+    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+
+    let app = App::new();
+    BrowserDriver::try_new(canvas_id, Box::new(app)).unwrap()
+}
+
+pub struct App {}
+
+impl AppDriver for App {
+    fn tick(&mut self, time: f32) -> Box<dyn Layout> {
+        Box::new(Container {
+            size: (100.0, 100.0).into(),
+            color: Color::blue(),
+            ..Default::default()
+        })
+    }
+}
+```
+
 ### App Boilerplate
 
 The library only requires that your application implements the `AppDriver`
@@ -35,13 +71,14 @@ like:
 
 ```rust
 pub struct App {
-    position: (f32, f32),
+    position: f32,
 }
 
 impl AppDriver for App {
     fn tick(&mut self, time: f32) -> Box<dyn Layout> {
+        self.position.x += 100.0 * time.sin();
         Box::new(Container {
-            size: (100.0, 100.0).into(),
+            size: self.position,
             color: Color::blue(),
             ..Default::default()
         })
@@ -49,7 +86,8 @@ impl AppDriver for App {
 }
 ```
 
-This will render a blue square that is 100 pixels wide and 100 pixels tall.
+This will render a blue square that is 100 pixels wide and 100 pixels tall that
+moves back and forth on the screen.
 
 Note the usage of `Default::default()`. This allows us to only define the fields
 we need, rather than being forced to specify every single in a widget. In this case, `Container` is defined like this:
