@@ -122,6 +122,10 @@ impl LayoutTree {
                 Some(root) => VecDeque::from([root]),
                 None => VecDeque::new(),
             },
+            offsets: match self.root {
+                Some(root) => VecDeque::from([Vector2::zero()]),
+                None => VecDeque::new(),
+            },
             remaining: match self.root {
                 Some(root) => VecDeque::from([root]),
                 None => VecDeque::new(),
@@ -133,28 +137,77 @@ impl LayoutTree {
 pub struct LayoutTreeIterator<'a> {
     tree: &'a LayoutTree,
     parents: VecDeque<LayoutBoxId>,
+    offsets: VecDeque<Vector2>,
     remaining: VecDeque<LayoutBoxId>,
 }
 
 impl<'a> Iterator for LayoutTreeIterator<'a> {
-    type Item = (&'a LayoutBox, &'a LayoutBox);
+    type Item = (&'a LayoutBox, &'a LayoutBox, Vector2);
 
-    fn next(&mut self) -> Option<(&'a LayoutBox, &'a LayoutBox)> {
+    fn next(&mut self) -> Option<(&'a LayoutBox, &'a LayoutBox, Vector2)> {
         let parent_id = self.parents.pop_front()?;
         let child_id = self.remaining.pop_front()?;
+        let parent_offset = self.offsets.pop_front()?;
         let parent = self.tree.get(parent_id)?;
         let child = self.tree.get(child_id)?;
-        for child in &child.children {
-            self.parents.push_back(child_id);
-            self.remaining.push_back(*child);
+        let offset = child.rect.min + parent_offset;
+        for child in child.children.iter().rev() {
+            self.parents.push_front(child_id);
+            self.remaining.push_front(*child);
+            self.offsets.push_front(offset);
         }
-        Some((parent, child))
+        Some((parent, child, parent_offset))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn layout_tree_iter_nested() {
+        let mut tree = LayoutTree::new();
+        let a = LayoutBox {
+            rect: Rect::new((0.0, 0.0).into(), (0.0, 0.0).into()),
+            children: vec![],
+            material: Material::None,
+        };
+        let a_id = tree.insert(a.clone());
+        let b = LayoutBox {
+            rect: Rect::new((1.0, 1.0).into(), (1.0, 1.0).into()),
+            children: vec![a_id],
+            material: Material::None,
+        };
+        let b_id = tree.insert(b.clone());
+        let c = LayoutBox {
+            rect: Rect::new((2.0, 2.0).into(), (2.0, 2.0).into()),
+            children: vec![b_id],
+            material: Material::None,
+        };
+        let c_id = tree.insert(c.clone());
+        let root = LayoutBox {
+            rect: Rect::new((3.0, 3.0).into(), (3.0, 3.0).into()),
+            children: vec![c_id],
+            material: Material::None,
+        };
+        let root_id = tree.insert(root.clone());
+        tree.set_root(Some(root_id));
+
+        let mut actual = vec![];
+        for item in tree.iter() {
+            actual.push(item);
+        }
+
+        let expected = vec![
+            (&root, &root, Vector2::new(0.0, 0.0)),
+            (&root, &c, Vector2::new(3.0, 3.0)),
+            (&c, &b, Vector2::new(5.0, 5.0)),
+            (&b, &a, Vector2::new(6.0, 6.0)),
+        ];
+        for (i, _) in actual.iter().enumerate() {
+            assert_eq!(expected[i], actual[i])
+        }
+    }
 
     #[test]
     fn layout_tree_iter_works() {
@@ -197,7 +250,13 @@ mod tests {
             actual.push(item);
         }
 
-        let expected = vec![(&c, &c), (&c, &a), (&c, &b), (&a, &a_child), (&b, &b_child)];
+        let expected = vec![
+            (&c, &c, Vector2::new(0.0, 0.0)),
+            (&c, &a, Vector2::new(3.0, 3.0)),
+            (&a, &a_child, Vector2::new(4.0, 4.0)),
+            (&c, &b, Vector2::new(3.0, 3.0)),
+            (&b, &b_child, Vector2::new(5.0, 5.0)),
+        ];
         for (i, _) in actual.iter().enumerate() {
             assert_eq!(expected[i], actual[i])
         }

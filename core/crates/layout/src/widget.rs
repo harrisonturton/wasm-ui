@@ -51,10 +51,12 @@ pub struct Column {
 impl Column {
     fn fixed_constraints(&self, constraints: &BoxConstraints) -> BoxConstraints {
         match self.cross_axis_alignment {
-            CrossAxisAlignment::Start | CrossAxisAlignment::End | CrossAxisAlignment::Center => BoxConstraints {
-                min: (0.0, 0.0).into(),
-                max: (constraints.max.x, f32::INFINITY).into(),
-            },
+            CrossAxisAlignment::Start | CrossAxisAlignment::End | CrossAxisAlignment::Center => {
+                BoxConstraints {
+                    min: (0.0, 0.0).into(),
+                    max: (constraints.max.x, f32::INFINITY).into(),
+                }
+            }
             CrossAxisAlignment::Stretch => BoxConstraints {
                 min: (constraints.max.x, 0.0).into(),
                 max: (constraints.max.x, f32::INFINITY).into(),
@@ -64,10 +66,12 @@ impl Column {
 
     fn flex_constraints(&self, constraints: &BoxConstraints, flex_height: f32) -> BoxConstraints {
         match self.cross_axis_alignment {
-            CrossAxisAlignment::Start | CrossAxisAlignment::End | CrossAxisAlignment::Center => BoxConstraints {
-                min: (0.0, flex_height).into(),
-                max: (constraints.max.x, flex_height).into(),
-            },
+            CrossAxisAlignment::Start | CrossAxisAlignment::End | CrossAxisAlignment::Center => {
+                BoxConstraints {
+                    min: (0.0, flex_height).into(),
+                    max: (constraints.max.x, flex_height).into(),
+                }
+            }
             CrossAxisAlignment::Stretch => BoxConstraints {
                 min: (constraints.max.x, flex_height).into(),
                 max: (constraints.max.x, flex_height).into(),
@@ -79,7 +83,9 @@ impl Column {
         match self.cross_axis_alignment {
             CrossAxisAlignment::Start | CrossAxisAlignment::Stretch => Vector2::new(0.0, y_pos),
             CrossAxisAlignment::End => Vector2::new(constraints.max.x - width, y_pos),
-            CrossAxisAlignment::Center => Vector2::new(constraints.max.x * 0.5 - width * 0.5, y_pos),
+            CrossAxisAlignment::Center => {
+                Vector2::new(constraints.max.x * 0.5 - width * 0.5, y_pos)
+            }
         }
     }
 }
@@ -115,7 +121,7 @@ impl Layout for Column {
         let space_per_flex = free_space / sum_flex_factor;
 
         let mut children = Vec::new();
-        let mut max_width = 0.0;  
+        let mut max_width = 0.0;
         let mut max_height = 0.0;
         for (child, maybe_sbox) in sbox_cache {
             match maybe_sbox {
@@ -128,7 +134,7 @@ impl Layout for Column {
                     children.push(id);
                     max_width = f32::max(max_width, size.x);
                     max_height += size.y;
-                },
+                }
                 // This is a flexible widget that must be laid out
                 None => match child {
                     Flex::Fixed { .. } => (),
@@ -143,7 +149,7 @@ impl Layout for Column {
                         children.push(id);
                         max_height += size.y;
                         max_width = f32::max(max_width, size.x);
-                    },
+                    }
                 },
             };
         }
@@ -198,17 +204,13 @@ pub struct Positioned {
 
 impl Layout for Positioned {
     fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
-        let max_child_size = constraints.max - self.position;
-        let child = self.child.layout(
-            tree,
-            &BoxConstraints {
-                min: constraints.min,
-                max: max_child_size,
-            },
-        );
-
-        let child_lbox = LayoutBox::from_child(child, self.position);
-        let child_id = tree.insert(child_lbox);
+        let child_constraints = BoxConstraints {
+            min: Vector2::zero(),
+            max: constraints.max - constraints.min - self.position,
+        };
+        let sbox = self.child.layout(tree, &child_constraints);
+        let lbox = LayoutBox::from_child(sbox, self.position);
+        let child_id = tree.insert(lbox);
         SizedLayoutBox {
             size: constraints.max,
             children: vec![child_id],

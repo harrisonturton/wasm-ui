@@ -69,36 +69,24 @@ impl BrowserDriver {
         let viewport = Vector2::new(width, height);
         self.shaders.standard.set_viewport(viewport);
 
+        self.paint(time, viewport)?;
+        Ok(())
+    }
+
+    pub fn paint(&mut self, time: f32, viewport: Vector2) -> Result<(), Error> {
         let mut tree = LayoutTree::new();
 
-        let widgets = self.app.tick(time);
-        let root = widgets.layout(
-            &mut tree,
-            &BoxConstraints {
-                min: Vector2::zero(),
-                max: viewport,
-            },
-        );
-        let size = Vector2::new(
-            f32::min(root.size.x, viewport.x),
-            f32::min(root.size.y, viewport.y),
-        );
-        let rect = Rect::new(Vector2::zero(), size);
-        let root_lbox = LayoutBox {
-            rect,
-            children: root.children,
-            material: root.material,
+        let widget_tree = self.app.tick(time);
+        let constraints = BoxConstraints {
+            min: Vector2::zero(),
+            max: viewport,
         };
+        let root_sbox = widget_tree.layout(&mut tree, &constraints);
+        let root_lbox = LayoutBox::from_child(root_sbox, (0.0, 0.0));
         let root_id = tree.insert(root_lbox);
         tree.set_root(Some(root_id));
 
-        if time % 5000.0 < 50.0 {
-            super::util::log(&format!("{:?}", tree));
-        }
-        //super::util::log(&format!("{:?}", time));
-
-        for (parent, child) in tree.iter() {
-            let offset = parent.rect.min;
+        for (parent, child, offset) in tree.iter() {
             let min = child.rect.min + offset;
             let max = child.rect.max + offset;
             let rect = Rect::new(min, max);
@@ -108,7 +96,6 @@ impl BrowserDriver {
             };
             self.draw_rect(rect, color)?;
         }
-
         Ok(())
     }
 

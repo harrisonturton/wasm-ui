@@ -18,95 +18,66 @@ impl App {
         App { position }
     }
 
-    /*    #[allow(dead_code)]
-    fn render_flex_sidebar(&self, time: f32) -> Box<dyn Layout> {
-        let sidebar_width = 150.0;
-        let sidebar_pos = sidebar_width * (0.5 + 0.5 * (time * 0.005).sin());
-        Box::new(Row {
-            cross_axis_alignment: CrossAxisAlignment::Stretch,
-            children: vec![
-                Flex {
-                    flex: None,
+    // The green box should be positioned at (200, 200). If not, then we are not
+    // correctly calculating the cumulative relative offset of a widget from
+    // it's ancestors.
+    #[allow(dead_code)]
+    fn render_nested_positioned(&self, _time: f32) -> Box<dyn Layout> {
+        Box::new(Positioned {
+            position: (0.0, 0.0).into(),
+            child: Box::new(Positioned {
+                position: (100.0, 100.0).into(),
+                child: Box::new(Positioned {
+                    position: (200.0, 200.0).into(),
                     child: Box::new(Container {
-                        size: Some(Vector2::new(sidebar_pos, f32::INFINITY)),
-                        color: Some(Color::white()),
-                        child: None,
-                    })
-                },
-                Flex {
-                    flex: Some(1.0),
-                    child: Box::new(Container {
-                        size: None,
-                        color: Some(Color::rgba(238.0, 238.0, 240.0, 255.0)),
-                        child: None,
-                    })
-                },
-            ],
+                        color: Some(Color::green()),
+                        size: Some((100.0, 100.0).into()),
+                        ..Default::default()
+                    }),
+                }),
+            }),
         })
     }
 
     #[allow(dead_code)]
-    fn render_flex_row(&self, _: f32) -> Box<dyn Layout> {
-        Box::new(Row {
-            cross_axis_alignment: CrossAxisAlignment::Start,
-            children: vec![
-                Flex {
-                    flex: Some(1.0),
-                    child: Box::new(Container {
-                        size: None,
-                        color: Some(Color::green()),
-                        child: None,
-                    }),
-                },
-                Flex {
-                    flex: None,
-                    child: Box::new(Container {
-                        size: Some(Vector2::new(100.0, 100.0)),
-                        color: Some(Color::red()),
-                        child: None,
-                    }),
-                },
-                Flex {
-                    flex: Some(1.0),
-                    child: Box::new(Container {
-                        size: None,
-                        color: Some(Color::yellow()),
-                        child: None,
-                    }),
-                },
-                Flex {
-                    flex: None,
-                    child: Box::new(Container {
-                        size: Some(Vector2::new(100.0, 100.0)),
-                        color: Some(Color::red()),
-                        child: None,
-                    }),
-                },
-            ],
-        })
-    }*/
-
-    #[allow(dead_code)]
-    fn render_flex_column(&self, _: f32) -> Box<dyn Layout> {
-        Box::new(Column {
-            cross_axis_alignment: CrossAxisAlignment::Center,
-            children: vec![
-                Flex::Flexible {
-                    flex: 1.0,
-                    child: Box::new(Container {
-                        size: Some((200.0, 100.0).into()),
-                        color: Some(Color::green()),
-                        child: None,
-                    }),
-                },
-                Flex::Fixed {
-                    child: Box::new(Container {
-                        size: Some(Vector2::new(100.0, 100.0)),
-                        color: Some(Color::red()),
-                        child: None,
-                    }),
-                },
-            ],
+    fn render_flex_column(&self, time: f32) -> Box<dyn Layout> {
+        let x_pos = -200.0 * (0.5 + 0.5 * (time * 0.005).sin());
+        Box::new(Stack {
+            children: vec![Positioned {
+                position: (x_pos, 0.0).into(),
+                child: Box::new(Column {
+                    cross_axis_alignment: CrossAxisAlignment::Start,
+                    children: vec![
+                        Flex::Fixed {
+                            child: Box::new(Column {
+                                cross_axis_alignment: CrossAxisAlignment::Start,
+                                children: vec![Flex::Fixed {
+                                    child: Box::new(Container {
+                                        size: Some((200.0, 25.0).into()),
+                                        color: Some(Color::black().alpha(0.25)),
+                                        child: None,
+                                    }),
+                                }],
+                            }),
+                        },
+                        Flex::Flexible {
+                            flex: 1.0,
+                            child: Box::new(Container {
+                                size: Some((100.0, 100.0).into()),
+                                color: Some(Color::green()),
+                                ..Default::default()
+                            }),
+                        },
+                        Flex::Fixed {
+                            child: Box::new(Container {
+                                size: Some(Vector2::new(100.0, 100.0)),
+                                color: Some(Color::red()),
+                                child: None,
+                            }),
+                        },
+                    ],
+                }),
+            }],
         })
     }
 
