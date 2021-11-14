@@ -86,6 +86,10 @@ impl BrowserDriver {
         let root_id = tree.insert(root_lbox);
         tree.set_root(Some(root_id));
 
+        if time % 5000.0 < 50.0 {
+            super::util::log(&format!("{:?}", tree));
+        }
+
         for (parent, child, offset) in tree.iter() {
             let min = child.rect.min + offset;
             let max = child.rect.max + offset;

@@ -1,4 +1,7 @@
-use layout::{Color, Column, Container, CrossAxisAlignment, Flex, Layout, Positioned, Stack};
+use layout::{
+    Color, Column, Container, CrossAxisAlignment, Flex, Layout, MainAxisAlignment, Positioned,
+    Stack,
+};
 use math::Vector2;
 use platform::AppDriver;
 
@@ -8,7 +11,7 @@ pub struct App {
 
 impl AppDriver for App {
     fn tick(&mut self, time: f32) -> Box<dyn Layout> {
-        self.render_flex_column(time)
+        self.render_space_between(time)
     }
 }
 
@@ -16,6 +19,31 @@ impl App {
     pub fn new() -> App {
         let position = Vector2::zero();
         App { position }
+    }
+
+    #[allow(dead_code)]
+    fn render_space_between(&self, _time: f32) -> Box<dyn Layout> {
+        Box::new(Column {
+            main_axis_alignment: MainAxisAlignment::SpaceAround,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                Flex::Flexible {
+                    flex: 1.0,
+                    child: Box::new(Container {
+                        size: Some((100.0, 100.0).into()),
+                        color: Some(Color::green()),
+                        ..Default::default()
+                    }),
+                },
+                Flex::Fixed {
+                    child: Box::new(Container {
+                        size: Some((100.0, 100.0).into()),
+                        color: Some(Color::red()),
+                        ..Default::default()
+                    }),
+                },
+            ],
+        })
     }
 
     // The green box should be positioned at (200, 200). If not, then we are not
@@ -46,10 +74,12 @@ impl App {
             children: vec![Positioned {
                 position: (x_pos, 0.0).into(),
                 child: Box::new(Column {
+                    main_axis_alignment: MainAxisAlignment::Start,
                     cross_axis_alignment: CrossAxisAlignment::Start,
                     children: vec![
                         Flex::Fixed {
                             child: Box::new(Column {
+                                main_axis_alignment: MainAxisAlignment::Start,
                                 cross_axis_alignment: CrossAxisAlignment::Start,
                                 children: vec![Flex::Fixed {
                                     child: Box::new(Container {
