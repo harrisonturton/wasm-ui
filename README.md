@@ -77,7 +77,7 @@ Box::new(Row {
     children: vec![
         Flex::Fixed {
             child: Box::new(Container{
-                size: (100.0, 100.0).into(),
+                size: (100.0, 200.0).into(),
                 color: Color::red(),
                 ..Default::default()
             }),
@@ -100,8 +100,10 @@ Box::new(Row {
 })
 ```
 
-This will position three squares – red, green and blue – horizontally in the
-center of the screen.
+This will position three rectangles – red, green and blue – horizontally in the
+center of the screen. The red rectangle will be twice as tall as the green and blue squares.
+
+<img width="1074" alt="Screen Shot 2021-11-14 at 2 11 00 pm" src="https://user-images.githubusercontent.com/20736299/141665966-1013fc2b-0f72-490a-a5e8-101eb2fd97a9.png">
 
 If we change the green square to this:
 
@@ -118,6 +120,8 @@ Flex::Flexible {
 
 Then it will expand to fill the screen in the horizontal direction, pushing the
 red and blue squares to the edges of the screen.
+
+<img width="1074" alt="Screen Shot 2021-11-14 at 2 11 15 pm" src="https://user-images.githubusercontent.com/20736299/141665968-8d6606e5-bb8b-4a8d-9df4-7e80c0a1a240.png">
 
 ## Roadmap
 
