@@ -1,6 +1,6 @@
 use layout::{
-    Color, Column, Container, CrossAxisAlignment, Flex, Layout, MainAxisAlignment, Positioned,
-    Stack, Row,
+    Color, Column, Container, CrossAxisAlignment, Flex, Layout, MainAxisAlignment, Positioned, Row,
+    Stack,
 };
 use math::Vector2;
 use platform::AppDriver;
@@ -11,7 +11,7 @@ pub struct App {
 
 impl AppDriver for App {
     fn tick(&mut self, time: f32) -> Box<dyn Layout> {
-        self.render_space_around_row(time)
+        self.render_sidebar_layout(time)
     }
 }
 
@@ -22,15 +22,40 @@ impl App {
     }
 
     #[allow(dead_code)]
+    fn render_sidebar_layout(&self, _time: f32) -> Box<dyn Layout> {
+        Box::new(Row {
+            cross_axis_alignment: CrossAxisAlignment::Stretch,
+            main_axis_alignment: MainAxisAlignment::Start,
+            children: vec![
+                Flex::Fixed {
+                    child: Box::new(Container {
+                        size: (150.0, 100.0).into(),
+                        color: Color::white(),
+                        ..Default::default()
+                    }),
+                },
+                Flex::Flexible {
+                    flex: 1.0,
+                    child: Box::new(Container {
+                        size: (150.0, f32::INFINITY).into(),
+                        color: Color::black().alpha(0.15),
+                        ..Default::default()
+                    }),
+                },
+            ],
+        })
+    }
+
+    #[allow(dead_code)]
     fn render_space_around_row(&self, _time: f32) -> Box<dyn Layout> {
         Box::new(Row {
+            cross_axis_alignment: CrossAxisAlignment::Center,
             main_axis_alignment: MainAxisAlignment::SpaceEvenly,
-            cross_axis_alignment: CrossAxisAlignment::End,
             children: vec![
                 Flex::Fixed {
                     child: Box::new(Container {
                         size: (100.0, 200.0).into(),
-                        color: Color::green(),
+                        color: Color::red(),
                         ..Default::default()
                     }),
                 },
@@ -38,7 +63,7 @@ impl App {
                     flex: 1.0,
                     child: Box::new(Container {
                         size: (100.0, 100.0).into(),
-                        color: Color::red(),
+                        color: Color::green(),
                         ..Default::default()
                     }),
                 },
@@ -50,10 +75,8 @@ impl App {
                     }),
                 },
             ],
-            ..Default::default()
         })
     }
-
 
     #[allow(dead_code)]
     fn render_space_around_column(&self, _time: f32) -> Box<dyn Layout> {

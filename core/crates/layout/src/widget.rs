@@ -84,12 +84,12 @@ impl Row {
             CrossAxisAlignment::Start | CrossAxisAlignment::End | CrossAxisAlignment::Center => {
                 BoxConstraints {
                     min: (flex_width, 0.0).into(),
-                    max: (flex_width, constraints.max.x).into(),
+                    max: (flex_width, constraints.max.y).into(),
                 }
             }
             CrossAxisAlignment::Stretch => BoxConstraints {
-                min: (flex_width, constraints.max.x).into(),
-                max: (flex_width, constraints.max.x).into(),
+                min: (flex_width, constraints.max.y).into(),
+                max: (flex_width, constraints.max.y).into(),
             },
         }
     }
@@ -221,7 +221,7 @@ impl Layout for Row {
         SizedLayoutBox {
             size: Vector2::new(size_x, size_y),
             children,
-            material: Material::Solid(Color::green().alpha(0.5)),
+            material: Material::None,
         }
     }
 }
@@ -395,7 +395,7 @@ impl Layout for Column {
         SizedLayoutBox {
             size: Vector2::new(size_x, size_y),
             children,
-            material: Material::Solid(Color::green().alpha(0.5)),
+            material: Material::None,
         }
     }
 }
