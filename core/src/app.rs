@@ -1,6 +1,6 @@
 use layout::{
-    Color, Column, Container, CrossAxisAlignment, Flex, Layout, MainAxisAlignment, Positioned, Row,
-    Stack,
+    Color, Column, Container, CrossAxisAlignment, Flex, Layout, MainAxisAlignment, MainAxisSize,
+    Positioned, Row, Stack,
 };
 use math::Vector2;
 use platform::AppDriver;
@@ -22,27 +22,56 @@ impl App {
     }
 
     #[allow(dead_code)]
+    pub fn sidebar(&self) -> Box<dyn Layout> {
+        Box::new(Column {
+            main_axis_size: MainAxisSize::Max,
+            cross_axis_alignment: CrossAxisAlignment::Stretch,
+            main_axis_alignment: MainAxisAlignment::Start,
+            children: vec![Flex::Fixed {
+                child: Box::new(Container {
+                    size: (100.0, 100.0).into(),
+                    color: Color::green(),
+                    ..Default::default()
+                }),
+            }],
+        })
+    }
+
+    #[allow(dead_code)]
     fn render_sidebar_layout(&self, _time: f32) -> Box<dyn Layout> {
+        // Should be a black sidebar that is 100px wide, with one green
+        // rectangle inside it that is 25px tall and 100px wide.
         Box::new(Row {
             cross_axis_alignment: CrossAxisAlignment::Stretch,
             main_axis_alignment: MainAxisAlignment::Start,
-            children: vec![
-                Flex::Fixed {
-                    child: Box::new(Container {
-                        size: (150.0, 100.0).into(),
-                        color: Color::white(),
-                        ..Default::default()
-                    }),
-                },
-                Flex::Flexible {
-                    flex: 1.0,
-                    child: Box::new(Container {
-                        size: (150.0, f32::INFINITY).into(),
-                        color: Color::black().alpha(0.15),
-                        ..Default::default()
-                    }),
-                },
-            ],
+            children: vec![Flex::Fixed {
+                child: Box::new(Container {
+                    size: (100.0, f32::INFINITY).into(),
+                    color: Color::green(),
+                    child: Some(Box::new(Column {
+                        main_axis_size: MainAxisSize::Min,
+                        cross_axis_alignment: CrossAxisAlignment::Stretch,
+                        main_axis_alignment: MainAxisAlignment::Start,
+                        children: vec![
+                            Flex::Fixed {
+                                child: Box::new(Container {
+                                    size: (f32::INFINITY, 25.0).into(),
+                                    color: Color::red(),
+                                    ..Default::default()
+                                }),
+                            },
+                            Flex::Fixed {
+                                child: Box::new(Container {
+                                    size: (f32::INFINITY, 25.0).into(),
+                                    color: Color::yellow(),
+                                    ..Default::default()
+                                }),
+                            },
+                        ],
+                    })),
+                    ..Default::default()
+                }),
+            }],
         })
     }
 
@@ -138,11 +167,13 @@ impl App {
             children: vec![Positioned {
                 position: (x_pos, 0.0).into(),
                 child: Box::new(Column {
+                    main_axis_size: MainAxisSize::Max,
                     main_axis_alignment: MainAxisAlignment::Start,
                     cross_axis_alignment: CrossAxisAlignment::Start,
                     children: vec![
                         Flex::Fixed {
                             child: Box::new(Column {
+                                main_axis_size: MainAxisSize::Max,
                                 main_axis_alignment: MainAxisAlignment::Start,
                                 cross_axis_alignment: CrossAxisAlignment::Start,
                                 children: vec![Flex::Fixed {
@@ -258,3 +289,29 @@ impl App {
         })
     }
 }
+
+/*LayoutTree {
+    root: Some(3),
+    boxes: [
+        LayoutBox {
+            rect: Rect { min: Vector2 { x: 0.0, y: 0.0 }, max: Vector2 { x: inf, y: 100.0 } },
+            children: [],
+            material: Solid(Color { r: 0.0, g: 255.0, b: 0.0, a: 255.0 }) },
+        // Column
+        LayoutBox {
+            // Why is max (100.0, 100.0)?
+            rect: Rect { min: Vector2 { x: 0.0, y: 0.0 }, max: Vector2 { x: 100.0, y: 100.0 } },
+            children: [0],
+            material: None },
+        // Fixed Container Black, (100.0, INFINITY)
+        LayoutBox {
+            rect: Rect { min: Vector2 { x: 0.0, y: 0.0 }, max: Vector2 { x: 100.0, y: 100.0 } },
+            children: [1],
+            material: Solid(Color { r: 0.0, g: 0.0, b: 0.0, a: 255.0 }) },
+        // Row
+        LayoutBox {
+            rect: Rect { min: Vector2 { x: 0.0, y: 0.0 }, max: Vector2 { x: 100.0, y: 798.0 } },
+            children: [2],
+            material: None }
+    ]
+}*/
