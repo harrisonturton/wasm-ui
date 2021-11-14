@@ -1,6 +1,6 @@
 use layout::{
     Color, Column, Container, CrossAxisAlignment, Flex, Layout, MainAxisAlignment, MainAxisSize,
-    Positioned, Row, Stack,
+    Positioned, Row, Stack, EdgeInsets
 };
 use math::Vector2;
 use platform::AppDriver;
@@ -38,39 +38,45 @@ impl App {
     }
 
     #[allow(dead_code)]
-    fn render_sidebar_layout(&self, _time: f32) -> Box<dyn Layout> {
-        // Should be a black sidebar that is 100px wide, with one green
+    fn render_sidebar_layout(&self, time: f32) -> Box<dyn Layout> {
+        // Should be a green sidebar that is 100px wide, with one green
         // rectangle inside it that is 25px tall and 100px wide.
+        //let x_pos = -100.0 * (0.5 + 0.5 * (time * 0.005).sin());
+        let x_pos = 0.0;
         Box::new(Row {
             cross_axis_alignment: CrossAxisAlignment::Stretch,
             main_axis_alignment: MainAxisAlignment::Start,
             children: vec![Flex::Fixed {
-                child: Box::new(Container {
-                    size: (100.0, f32::INFINITY).into(),
-                    color: Color::green(),
-                    child: Some(Box::new(Column {
-                        main_axis_size: MainAxisSize::Min,
-                        cross_axis_alignment: CrossAxisAlignment::Stretch,
-                        main_axis_alignment: MainAxisAlignment::Start,
-                        children: vec![
-                            Flex::Fixed {
-                                child: Box::new(Container {
-                                    size: (f32::INFINITY, 25.0).into(),
-                                    color: Color::red(),
-                                    ..Default::default()
-                                }),
-                            },
-                            Flex::Fixed {
-                                child: Box::new(Container {
-                                    size: (f32::INFINITY, 25.0).into(),
-                                    color: Color::yellow(),
-                                    ..Default::default()
-                                }),
-                            },
-                        ],
-                    })),
-                    ..Default::default()
-                }),
+                child: Box::new(Positioned {
+                    position: (x_pos, 0.0).into(),
+                    child: Box::new(Container {
+                        padding: EdgeInsets::zero(),
+                        size: (100.0, f32::INFINITY).into(),
+                        color: Color::green(),
+                        child: Some(Box::new(Column {
+                            main_axis_size: MainAxisSize::Min,
+                            cross_axis_alignment: CrossAxisAlignment::Stretch,
+                            main_axis_alignment: MainAxisAlignment::Start,
+                            children: vec![
+                                Flex::Fixed {
+                                    child: Box::new(Container {
+                                        size: (f32::INFINITY, 25.0).into(),
+                                        color: Color::red(),
+                                        ..Default::default()
+                                    }),
+                                },
+                                Flex::Fixed {
+                                    child: Box::new(Container {
+                                        size: (f32::INFINITY, 25.0).into(),
+                                        color: Color::yellow(),
+                                        ..Default::default()
+                                    }),
+                                },
+                            ],
+                        })),
+                        ..Default::default()
+                    }),
+                })
             }],
         })
     }
@@ -180,7 +186,7 @@ impl App {
                                     child: Box::new(Container {
                                         size: (200.0, 25.0).into(),
                                         color: Color::black().alpha(0.25),
-                                        child: None,
+                                        ..Default::default()
                                     }),
                                 }],
                             }),
@@ -197,7 +203,7 @@ impl App {
                             child: Box::new(Container {
                                 size: Vector2::new(100.0, 100.0),
                                 color: Color::red(),
-                                child: None,
+                                ..Default::default()
                             }),
                         },
                     ],

@@ -22,12 +22,12 @@ impl Column {
             CrossAxisAlignment::Start | CrossAxisAlignment::End | CrossAxisAlignment::Center => {
                 BoxConstraints {
                     min: (0.0, 0.0).into(),
-                    max: (constraints.max.x, f32::INFINITY).into(),
+                    max: (constraints.max.x, constraints.max.y).into(),
                 }
             }
             CrossAxisAlignment::Stretch => BoxConstraints {
                 min: (constraints.max.x, 0.0).into(),
-                max: (constraints.max.x, f32::INFINITY).into(),
+                max: (constraints.max.x, constraints.max.y).into(),
             },
         }
     }
@@ -166,11 +166,8 @@ impl Layout for Column {
             _ => constraints.max.x,
         };
         let size = match self.main_axis_size {
-            MainAxisSize::Min => {
-                Vector2::new(size_x, total_height).clamp_between(constraints.min, constraints.max)
-            }
-            MainAxisSize::Max => Vector2::new(size_x, f32::INFINITY)
-                .clamp_between(Vector2::new(size_x, total_height), constraints.max),
+            MainAxisSize::Min => Vector2::new(size_x, total_height.clamp(constraints.min.y, constraints.max.y)),
+            MainAxisSize::Max => Vector2::new(size_x, constraints.max.y),
         };
 
         SizedLayoutBox {

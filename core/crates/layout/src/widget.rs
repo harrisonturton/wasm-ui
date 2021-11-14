@@ -81,12 +81,12 @@ impl Row {
             CrossAxisAlignment::Start | CrossAxisAlignment::End | CrossAxisAlignment::Center => {
                 BoxConstraints {
                     min: (0.0, 0.0).into(),
-                    max: (f32::INFINITY, constraints.max.y).into(),
+                    max: (constraints.max.x, constraints.max.y).into(),
                 }
             }
             CrossAxisAlignment::Stretch => BoxConstraints {
                 min: (0.0, constraints.max.y).into(),
-                max: (f32::INFINITY, constraints.max.y).into(),
+                max: (constraints.max.x, constraints.max.y).into(),
             },
         }
     }
@@ -278,7 +278,7 @@ impl Layout for Positioned {
     fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
         let child_constraints = BoxConstraints {
             min: Vector2::zero(),
-            max: constraints.max - constraints.min - self.position,
+            max: constraints.max - self.position,
         };
         let sbox = self.child.layout(tree, &child_constraints);
         let lbox = LayoutBox::from_child(sbox, self.position);
@@ -295,8 +295,95 @@ impl Layout for Positioned {
 // Container
 // --------------------------------------------------
 
+#[derive(Debug, Default)]
+pub struct EdgeInsets {
+    pub top: f32,
+    pub bottom: f32,
+    pub left: f32,
+    pub right: f32,
+}
+
+impl EdgeInsets {
+    pub fn zero() -> EdgeInsets {
+        EdgeInsets::all(0.0)
+    }
+
+    pub fn all(inset: f32) -> EdgeInsets {
+        EdgeInsets {
+            top: inset,
+            bottom: inset,
+            left: inset,
+            right: inset,
+        }
+    }
+
+    pub fn vertical(inset: f32) -> EdgeInsets {
+        EdgeInsets {
+            top: inset,
+            bottom: inset,
+            left: 0.0,
+            right: 0.0,
+        }
+    }
+
+    pub fn horizontal(inset: f32) -> EdgeInsets {
+        EdgeInsets {
+            top: 0.0,
+            bottom: 0.0,
+            left: inset,
+            right: inset,
+        }
+    }
+
+    pub fn top(inset: f32) -> EdgeInsets {
+        EdgeInsets {
+            top: inset,
+            bottom: 0.0,
+            left: 0.0,
+            right: 0.0,
+        }
+    }
+
+    pub fn bottom(inset: f32) -> EdgeInsets {
+        EdgeInsets {
+            top: 0.0,
+            bottom: inset,
+            left: 0.0,
+            right: 0.0,
+        }
+    }
+
+    pub fn left(inset: f32) -> EdgeInsets {
+        EdgeInsets {
+            top: 0.0,
+            bottom: 0.0,
+            left: inset,
+            right: 0.0,
+        }
+    }
+
+    pub fn right(inset: f32) -> EdgeInsets {
+        EdgeInsets {
+            top: 0.0,
+            bottom: 0.0,
+            left: 0.0,
+            right: inset,
+        }
+    }
+
+    pub fn min(&self) -> Vector2 {
+        Vector2::new(self.left, self.top)
+    }
+
+    pub fn max(&self) -> Vector2 {
+        Vector2::new(self.right, self.bottom)
+    }
+}
+
 #[derive(Debug)]
 pub struct Container {
+    pub padding: EdgeInsets,
+    pub margin: EdgeInsets,
     pub size: Vector2,
     pub color: Color,
     pub child: Option<Box<dyn Layout>>,
@@ -305,6 +392,8 @@ pub struct Container {
 impl Default for Container {
     fn default() -> Container {
         Container {
+            padding: EdgeInsets::zero(),
+            margin: EdgeInsets::zero(),
             size: Vector2::new(f32::INFINITY, f32::INFINITY),
             color: Color::transparent(),
             child: None,
@@ -316,13 +405,20 @@ impl Layout for Container {
     fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
         match &self.child {
             Some(child) => {
+                let desired_max = Vector2::new(
+                    self.size.x - self.padding.left - self.padding.right,
+                    self.size.y - self.padding.top - self.padding.bottom,
+                );
                 let child_constraints = BoxConstraints {
                     min: Vector2::zero(),
-                    max: self.size.clamp_between(constraints.min, constraints.max),
+                    max: Vector2::new(
+                        desired_max.x.clamp(constraints.min.x, constraints.max.x),
+                        desired_max.y.clamp(constraints.min.y, constraints.max.y),
+                    )
                 };
                 let sbox = child.layout(tree, &child_constraints);
                 let child_size = sbox.size;
-                let lbox = LayoutBox::from_child(sbox, Vector2::zero());
+                let lbox = LayoutBox::from_child(sbox, self.padding.min() + self.margin.min());
                 let child_id = tree.insert(lbox);
                 SizedLayoutBox {
                     size: self.size.clamp_between(child_size, constraints.max),
@@ -331,13 +427,42 @@ impl Layout for Container {
                 }
             }
             None => {
-                let size = self.size.clamp_between(constraints.min, constraints.max);
+                let child = Rect {
+                    size: Vector2::new(
+                        self.size.x.clamp(constraints.min.x, constraints.max.x),
+                        self.size.y.clamp(constraints.min.y, constraints.max.y)
+                    ),
+                    color: self.color,
+                };
+                let size = Vector2::new(
+                    (self.size.x + self.margin.left + self.margin.right).clamp(constraints.min.x, constraints.max.x),
+                    (self.size.y + self.margin.top + self.margin.bottom).clamp(constraints.min.y, constraints.max.y),
+                );
+                let sbox = child.layout(tree, constraints);
+                let lbox = LayoutBox::from_child(sbox, self.margin.min());
+                let id = tree.insert(lbox);
                 SizedLayoutBox {
                     size,
-                    children: vec![],
-                    material: Material::Solid(self.color),
+                    children: vec![id],
+                    material: Material::None,
                 }
             }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Rect {
+    size: Vector2,
+    color: Color,
+}
+
+impl Layout for Rect {
+    fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
+        SizedLayoutBox {
+            size: Vector2::new(self.size.x.clamp(constraints.min.x, constraints.max.x), self.size.y.clamp(constraints.min.y, constraints.max.y)),
+            children: vec![],
+            material: Material::Solid(self.color),
         }
     }
 }
