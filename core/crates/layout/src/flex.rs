@@ -1,7 +1,4 @@
-use super::{
-    BoxConstraints, Color, Layout, LayoutBox, LayoutTree,
-    Material, SizedLayoutBox,
-};
+use super::{BoxConstraints, Color, Layout, LayoutBox, LayoutTree, Material, SizedLayoutBox};
 use math::Vector2;
 use std::fmt::Debug;
 
@@ -172,17 +169,13 @@ impl Layout for FlexGroup {
         let sboxes = sbox_cache.iter().filter_map(|(_, sbox)| sbox.as_ref());
         for (i, sbox) in sboxes.enumerate() {
             let cross_size = self.child_cross_axis_size(sbox);
-            let cross_pos = self.child_cross_axis_position(
-                constraints,
-                cross_size,
-                max_cross_size,
-            );
+            let cross_pos = self.child_cross_axis_position(constraints, cross_size, max_cross_size);
             let main_pos = self.child_main_axis_position(
                 constraints,
                 total_size,
                 sbox_cache.len(),
                 i,
-                current_main_size
+                current_main_size,
             );
             let pos = match self.axis {
                 Axis::Vertical => Vector2::new(cross_pos, main_pos),

@@ -96,7 +96,7 @@ impl BrowserDriver {
             let rect = Rect::new(min, max);
             let color = match child.material {
                 layout::Material::Solid(color) => color,
-                layout::Material::None => Color::transparent(),
+                layout::Material::None => continue,
             };
             self.draw_rect(rect, color)?;
         }

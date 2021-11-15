@@ -1,6 +1,6 @@
 use layout::{
-    Center, Color, Container, CrossAxisAlignment, EdgeInsets, Flex, Layout,
-    MainAxisAlignment, MainAxisSize, Positioned, Stack,
+    Center, Color, Container, CrossAxisAlignment, EdgeInsets, Flex, Layout, MainAxisAlignment,
+    MainAxisSize, Positioned, Stack,
 };
 use math::Vector2;
 use platform::AppDriver;
@@ -32,6 +32,7 @@ impl App {
             children: vec![
                 Flex::Fixed {
                     child: Box::new(Container {
+                        margin: EdgeInsets::all(10.0),
                         size: (50.0, 100.0).into(),
                         color: Color::red(),
                         ..Default::default()
@@ -39,6 +40,7 @@ impl App {
                 },
                 Flex::Fixed {
                     child: Box::new(Container {
+                        margin: EdgeInsets::all(10.0),
                         size: (200.0, 300.0).into(),
                         color: Color::green(),
                         ..Default::default()
