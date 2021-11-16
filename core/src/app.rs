@@ -25,10 +25,10 @@ impl App {
     pub fn render_flex_group(&self) -> Box<dyn Layout> {
         use layout::{Axis, FlexGroup};
         Box::new(FlexGroup {
-            axis: Axis::Horizontal,
+            axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceBetween,
-            cross_axis_alignment: CrossAxisAlignment::Center,
+            cross_axis_alignment: CrossAxisAlignment::Stretch,
             children: vec![
                 Flex::Fixed {
                     child: Box::new(Container {

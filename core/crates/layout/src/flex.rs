@@ -226,22 +226,35 @@ impl FlexGroup {
         }
     }
 
+    fn align_constraints(&self, main_axis_constraint: Vector2, cross_axis_constraint: Vector2) -> BoxConstraints {
+        let (main_min, main_max) = main_axis_constraint.into();
+        let (cross_min, cross_max) = cross_axis_constraint.into();
+        match self.axis {
+            Axis::Horizontal => BoxConstraints {
+                min: (main_min, cross_min).into(),
+                max: (main_max, cross_max).into(),
+            },
+            Axis::Vertical => BoxConstraints {
+                min: (cross_min, main_min).into(),
+                max: (cross_max, main_max).into(),
+            }
+        }
+    }
+
     // Calculate the [BoxConstraints] for a [Flex::Fixed] child.
     fn fixed_child_constraints(&self, constraints: &BoxConstraints) -> BoxConstraints {
         let (_, main_max) = self.main_axis_constraint(constraints).into();
         let (_, cross_max) = self.cross_axis_constraint(constraints).into();
-        match self.cross_axis_alignment {
+        let cross_constraint = match self.cross_axis_alignment {
             CrossAxisAlignment::Start | CrossAxisAlignment::End | CrossAxisAlignment::Center => {
-                BoxConstraints {
-                    min: (0.0, 0.0).into(),
-                    max: (cross_max, main_max).into(),
-                }
+                Vector2::new(0.0, cross_max)
             }
-            CrossAxisAlignment::Stretch => BoxConstraints {
-                min: (cross_max, 0.0).into(),
-                max: (cross_max, main_max).into(),
+            CrossAxisAlignment::Stretch => {
+                Vector2::new(cross_max, cross_max)
             },
-        }
+        };
+        let main_constraint = Vector2::new(0.0, main_max);
+        self.align_constraints(main_constraint, cross_constraint)
     }
 
     // Calculate the [BoxConstraints] for a [Flex::Flexible] child.
