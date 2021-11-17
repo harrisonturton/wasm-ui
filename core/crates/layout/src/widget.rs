@@ -192,15 +192,18 @@ impl Layout for Container {
     fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
         match &self.child {
             Some(child) => {
-                let desired_max = Vector2::new(
-                    self.size.x - self.padding.left - self.padding.right,
-                    self.size.y - self.padding.top - self.padding.bottom,
-                );
+                let h_padding = self.padding.left + self.padding.right;
+                let v_padding = self.padding.top + self.padding.bottom;
+                let desired_max = Vector2::new(self.size.x - h_padding, self.size.y - v_padding);
                 let child_constraints = BoxConstraints {
                     min: Vector2::zero(),
                     max: Vector2::new(
-                        desired_max.x.clamp(constraints.min.x, constraints.max.x),
-                        desired_max.y.clamp(constraints.min.y, constraints.max.y),
+                        desired_max
+                            .x
+                            .clamp(constraints.min.x - h_padding, constraints.max.x - h_padding),
+                        desired_max
+                            .y
+                            .clamp(constraints.min.y - v_padding, constraints.max.y - v_padding),
                     ),
                 };
                 let sbox = child.layout(tree, &child_constraints);
@@ -242,8 +245,8 @@ impl Layout for Container {
 
 #[derive(Debug)]
 pub struct Rect {
-    size: Vector2,
-    color: Color,
+    pub size: Vector2,
+    pub color: Color,
 }
 
 impl Layout for Rect {

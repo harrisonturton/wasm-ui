@@ -22,6 +22,21 @@ impl Rect {
             max: Vector2::zero(),
         }
     }
+    
+    pub fn from_pos<I: Into<Vector2>>(pos: I, size: I) -> Self {
+        let pos = pos.into();
+        Self {
+            min: pos,
+            max: pos + size.into(),
+        }
+    }
+
+    pub fn from_size<I: Into<Vector2>>(max: I) -> Self {
+        Self {
+            min: Vector2::zero(),
+            max: max.into(),
+        }
+    }
 
     /// Get the width and height of the rectangle.
     #[inline]

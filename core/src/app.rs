@@ -11,7 +11,7 @@ pub struct App {
 
 impl AppDriver for App {
     fn tick(&mut self, time: f32) -> Box<dyn Layout> {
-        self.render_flex_group()
+        self.test()
     }
 }
 
@@ -21,32 +21,78 @@ impl App {
         App { position }
     }
 
-    #[allow(dead_code)]
-    pub fn render_flex_group(&self) -> Box<dyn Layout> {
+    pub fn test(&self) -> Box<dyn Layout> {
         use layout::{Axis, FlexGroup};
         Box::new(FlexGroup {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
-            main_axis_alignment: MainAxisAlignment::SpaceBetween,
-            cross_axis_alignment: CrossAxisAlignment::Stretch,
+            main_axis_alignment: MainAxisAlignment::End,
+            cross_axis_alignment: CrossAxisAlignment::Start,
             children: vec![
                 Flex::Fixed {
-                    child: Box::new(Container {
-                        margin: EdgeInsets::all(10.0),
-                        size: (50.0, 100.0).into(),
+                    child: Box::new(layout::Rect {
+                        size: (10.0, 100.0).into(),
                         color: Color::red(),
-                        ..Default::default()
-                    }),
+                    })
                 },
                 Flex::Fixed {
-                    child: Box::new(Container {
-                        margin: EdgeInsets::all(10.0),
-                        size: (200.0, 300.0).into(),
-                        color: Color::green(),
-                        ..Default::default()
-                    }),
+                    child: Box::new(layout::Rect {
+                        size: (10.0, 100.0).into(),
+                        color: Color::red(),
+                    })
                 },
-            ],
+                Flex::Fixed {
+                    child: Box::new(layout::Rect {
+                        size: (10.0, 100.0).into(),
+                        color: Color::red(),
+                    })
+                },
+            ]
+        })
+    }
+
+    #[allow(dead_code)]
+    pub fn render_flex_group(&self) -> Box<dyn Layout> {
+        use layout::{Axis, FlexGroup};
+        Box::new(Container {
+            size: (f32::INFINITY, f32::INFINITY).into(),
+            color: Color::yellow(),
+            padding: EdgeInsets::all(10.0),
+            child: Some(Box::new(FlexGroup {
+                axis: Axis::Vertical, // Is this a bug? Or just overflow? How can we calculate when overlfow happens?
+                main_axis_size: MainAxisSize::Min,
+                main_axis_alignment: MainAxisAlignment::Start,
+                cross_axis_alignment: CrossAxisAlignment::Start,
+                children: vec![
+                    Flex::Fixed {
+                        child: Box::new(FlexGroup {
+                            axis: Axis::Horizontal,
+                            main_axis_size: MainAxisSize::Min,
+                            main_axis_alignment: MainAxisAlignment::SpaceEvenly,
+                            cross_axis_alignment: CrossAxisAlignment::Start,
+                            children: vec![
+                                Flex::Fixed {
+                                    child: Box::new(Container {
+                                        margin: EdgeInsets::bottom(10.0),
+                                        size: (15.0, 25.0).into(),
+                                        color: Color::red(),
+                                        ..Default::default()
+                                    }),
+                                },
+                            ],
+                            ..Default::default()
+                        })
+                    },
+                    Flex::Fixed {
+                        child: Box::new(Container {
+                            size: (200.0, 300.0).into(),
+                            color: Color::green(),
+                            ..Default::default()
+                        }),
+                    },
+                ],
+            })),
+            ..Default::default()
         })
     }
 

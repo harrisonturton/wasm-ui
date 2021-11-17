@@ -1,4 +1,4 @@
-use super::{BoxConstraints, Color, Layout, LayoutBox, LayoutTree, Material, SizedLayoutBox};
+use super::{Color, BoxConstraints, Layout, LayoutBox, LayoutTree, Material, SizedLayoutBox};
 use math::Vector2;
 use std::fmt::Debug;
 
@@ -25,6 +25,8 @@ impl Default for Axis {
 #[derive(Copy, Clone, Debug)]
 pub enum MainAxisAlignment {
     Start,
+    End,
+    Center,
     SpaceEvenly,
     SpaceAround,
     SpaceBetween,
@@ -166,13 +168,23 @@ impl Layout for FlexGroup {
         let mut children = vec![];
         let mut current_main_size = 0.0;
 
+        let main_axis_size = match self.main_axis_size {
+            MainAxisSize::Min => total_size,
+            MainAxisSize::Max => {
+                let (_, main_max) = self.main_axis_constraint(constraints).into();
+                main_max
+            }
+        };
+
         let sboxes = sbox_cache.iter().filter_map(|(_, sbox)| sbox.as_ref());
         for (i, sbox) in sboxes.enumerate() {
             let cross_size = self.child_cross_axis_size(sbox);
+            let main_size = self.child_main_axis_size(sbox);
             let cross_pos = self.child_cross_axis_position(constraints, cross_size, max_cross_size);
             let main_pos = self.child_main_axis_position(
                 constraints,
                 total_size,
+                main_size,
                 sbox_cache.len(),
                 i,
                 current_main_size,
@@ -186,7 +198,6 @@ impl Layout for FlexGroup {
             let id = tree.insert(lbox);
             children.push(id);
             max_cross_size = f32::max(max_cross_size, cross_size);
-            let main_size = self.child_main_axis_size(sbox);
             current_main_size += (main_pos - current_main_size) + main_size;
         }
 
@@ -204,7 +215,7 @@ impl Layout for FlexGroup {
         SizedLayoutBox {
             size,
             children,
-            material: Material::Solid(Color::blue()),
+            material: Material::None,
         }
     }
 }
@@ -226,7 +237,11 @@ impl FlexGroup {
         }
     }
 
-    fn align_constraints(&self, main_axis_constraint: Vector2, cross_axis_constraint: Vector2) -> BoxConstraints {
+    fn align_constraints(
+        &self,
+        main_axis_constraint: Vector2,
+        cross_axis_constraint: Vector2,
+    ) -> BoxConstraints {
         let (main_min, main_max) = main_axis_constraint.into();
         let (cross_min, cross_max) = cross_axis_constraint.into();
         match self.axis {
@@ -237,7 +252,7 @@ impl FlexGroup {
             Axis::Vertical => BoxConstraints {
                 min: (cross_min, main_min).into(),
                 max: (cross_max, main_max).into(),
-            }
+            },
         }
     }
 
@@ -249,9 +264,7 @@ impl FlexGroup {
             CrossAxisAlignment::Start | CrossAxisAlignment::End | CrossAxisAlignment::Center => {
                 Vector2::new(0.0, cross_max)
             }
-            CrossAxisAlignment::Stretch => {
-                Vector2::new(cross_max, cross_max)
-            },
+            CrossAxisAlignment::Stretch => Vector2::new(cross_max, cross_max),
         };
         let main_constraint = Vector2::new(0.0, main_max);
         self.align_constraints(main_constraint, cross_constraint)
@@ -264,18 +277,14 @@ impl FlexGroup {
         flex_size: f32,
     ) -> BoxConstraints {
         let (_, cross_max) = self.cross_axis_constraint(constraints).into();
-        match self.cross_axis_alignment {
+        let cross_constraint = match self.cross_axis_alignment {
             CrossAxisAlignment::Start | CrossAxisAlignment::End | CrossAxisAlignment::Center => {
-                BoxConstraints {
-                    min: (0.0, flex_size).into(),
-                    max: (cross_max, flex_size).into(),
-                }
+                Vector2::new(0.0, cross_max)
             }
-            CrossAxisAlignment::Stretch => BoxConstraints {
-                min: (cross_max, flex_size).into(),
-                max: (cross_max, flex_size).into(),
-            },
-        }
+            CrossAxisAlignment::Stretch => Vector2::new(cross_max, cross_max),
+        };
+        let main_constraint = Vector2::new(flex_size, flex_size);
+        self.align_constraints(main_constraint, cross_constraint)
     }
 
     fn child_main_axis_position(
@@ -283,6 +292,7 @@ impl FlexGroup {
         constraints: &BoxConstraints,
         // The total size of all elements along the main axis
         total_main_axis_size: f32,
+        child_main_axis_size: f32,
         // The number of elements in the FlexGroup
         num_widgets: usize,
         // The index of the current element in the FlexGroup
@@ -294,6 +304,8 @@ impl FlexGroup {
         let (_, main_max) = self.main_axis_constraint(constraints).into();
         match self.main_axis_alignment {
             MainAxisAlignment::Start => current_main_size,
+            MainAxisAlignment::End => main_max - (child_main_axis_size * index as f32),
+            MainAxisAlignment::Center => main_max * 0.5 - child_main_axis_size * 0.5,
             MainAxisAlignment::SpaceEvenly => {
                 let space = (main_max - total_main_axis_size) / (num_widgets as f32 + 1.0);
                 current_main_size + space
@@ -307,8 +319,11 @@ impl FlexGroup {
                 }
             }
             MainAxisAlignment::SpaceBetween => {
+                if num_widgets == 1 {
+                    return main_max * 0.5 - child_main_axis_size * 0.5;
+                }
                 if index == 0 {
-                    current_main_size
+                    0.0
                 } else {
                     let space = (main_max - total_main_axis_size) / (num_widgets as f32 - 1.0);
                     current_main_size + space
@@ -325,7 +340,6 @@ impl FlexGroup {
         // The size of all elements along the cross axis
         max_cross_axis_size: f32,
     ) -> f32 {
-        let (_, cross_max) = self.cross_axis_constraint(constraints).into();
         match self.cross_axis_alignment {
             CrossAxisAlignment::Start | CrossAxisAlignment::Stretch => 0.0,
             CrossAxisAlignment::End => max_cross_axis_size - cross_axis_size,
@@ -346,6 +360,1829 @@ impl FlexGroup {
         match self.axis {
             Axis::Horizontal => sbox.size.y,
             Axis::Vertical => sbox.size.x,
+        }
+    }
+}
+
+/// Flex layout is powerful and complex. It can be configured many different
+/// ways, with very different behaviors. To try and make sure our tests cover
+/// all possible cases, this test module uses the following format:
+///
+/// 1. Feature section header
+/// 2. "vertical_{parameter name}_with_fixed_child
+/// 3. "horizontal_{parameter name}_with_fixed_child
+/// 4. "vertical_{parameter name}_with_three_fixed_children
+/// 5. "horizontal_{parameter name}_with_three_fixed_children
+/// 6. "vertical_{parameter name}_with_flex_child
+/// 7. "horizontal_{parameter name}_with_flex_child
+/// 8. "vertical_{parameter name}_with_three_flex_children
+/// 9. "horizontal_{parameter name}_with_three_flex_children
+///
+/// I've found that alternating between vertical and horizontal axes, and
+/// between one and multiple children, covers a good amount of behaviour.
+///
+/// Testing vertical and horizontal layouts near eachother makes it easier to
+/// debug and fix main axis/cross axis bugs. Testing one child and three
+/// children seems to generalise well to other child numbers.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::widget;
+    use math::{Rect, Vector2};
+    use test_util::assert_slice_eq;
+
+    // --------------------------------------------------
+    // Main axis size
+    // --------------------------------------------------
+
+    #[test]
+    fn vertical_main_axis_size_min_with_fixed_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Min,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            fixed_child_lbox(),
+            LayoutBox {
+                rect: Rect::from_size((10.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_size_min_with_fixed_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Min,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            fixed_child_lbox(),
+            LayoutBox {
+                rect: Rect::from_size((10.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_size_min_with_three_fixed_children() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Min,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_fixed_child(),
+                create_fixed_child(),
+                create_fixed_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 10.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 20.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 30.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_size_min_with_three_fixed_children() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Min,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_fixed_child(),
+                create_fixed_child(),
+                create_fixed_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((10.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((20.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((30.0, 10.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_size_min_with_flex_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Min,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_flex_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_size_min_with_flex_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Min,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_flex_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_size_min_with_three_flex_child_children() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Min,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_flex_child(),
+                create_flex_child(),
+                create_flex_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let size = 100.0 / 3.0;
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, size), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_size_min_with_three_flex_child_children() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Min,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_flex_child(),
+                create_flex_child(),
+                create_flex_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let size = 100.0 / 3.0;
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((size, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_size_max_with_fixed_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_size((10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_size_max_with_fixed_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_size((10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_size_max_with_three_fixed_children() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_fixed_child(),
+                create_fixed_child(),
+                create_fixed_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 10.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 20.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_size_max_with_three_fixed_children() {
+        let column = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_fixed_child(),
+                create_fixed_child(),
+                create_fixed_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((10.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((20.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_size_max_with_flex_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_flex_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_size_max_with_flex_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_flex_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_size_max_with_three_flex_children() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_flex_child(),
+                create_flex_child(),
+                create_flex_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let size = 100.0 / 3.0;
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, size), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_size_max_with_three_flex_children() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_flex_child(),
+                create_flex_child(),
+                create_flex_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let size = 100.0 / 3.0;
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((size, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    // --------------------------------------------------
+    // Main axis alignment
+    // --------------------------------------------------
+
+    #[test]
+    fn vertical_main_axis_alignment_start_with_fixed_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_size((10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_start_with_fixed_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_size((10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_start_with_three_fixed_children() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_fixed_child(),
+                create_fixed_child(),
+                create_fixed_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 10.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 20.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_start_with_three_fixed_children() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_fixed_child(),
+                create_fixed_child(),
+                create_fixed_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((10.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((20.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_start_with_flex_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_flex_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_start_with_flex_child() {
+        let column = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_flex_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_start_with_three_flex_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_flex_child(),
+                create_flex_child(),
+                create_flex_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let size = 100.0 / 3.0;
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, size), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_start_with_three_flex_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Start,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_flex_child(),
+                create_flex_child(),
+                create_flex_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let size = 100.0 / 3.0;
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((size, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_end_with_fixed_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::End,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_end_with_fixed_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::End,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((90.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    // BUG HERE, MAA END WILL PUT EVERYTHING ALL THE WAY AT THE END AND NOT COMPENSATE FOR OTHER WIDGET SIZES
+    fn vertical_main_axis_alignment_end_with_three_fixed_children() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::End,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_fixed_child(),
+                create_fixed_child(),
+                create_fixed_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 70.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 80.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_end_with_flex_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::End,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_flex_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_end_with_flex_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::End,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_flex_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_center_with_fixed_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Center,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_center_with_fixed_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Center,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_center_with_flex_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Center,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_flex_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_center_with_flex_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::Center,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_flex_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_space_between_with_fixed_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceBetween,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_space_between_with_fixed_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceBetween,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_space_between_with_three_fixed_children() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceBetween,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_fixed_child(),
+                create_fixed_child(),
+                create_fixed_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_space_between_with_three_fixed_children() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceBetween,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_fixed_child(),
+                create_fixed_child(),
+                create_fixed_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((90.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_space_between_with_flex_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceBetween,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_flex_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_space_between_with_flex_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceBetween,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_flex_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_space_between_with_three_flex_children() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceBetween,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_flex_child(),
+                create_flex_child(),
+                create_flex_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let size = 100.0 / 3.0;
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, size), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_space_between_with_three_flex_children() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceBetween,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_flex_child(),
+                create_flex_child(),
+                create_flex_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let size = 100.0 / 3.0;
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((size, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_space_around_with_fixed_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceAround,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_space_around_with_fixed_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceAround,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_space_around_with_three_fixed_children() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceAround,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_fixed_child(),
+                create_fixed_child(),
+                create_fixed_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let spacing = (100.0 - 30.0) / 3.0;
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, spacing * 0.5), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 10.0 + spacing * 1.5), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 20.0 + spacing * 2.5), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_space_around_with_three_fixed_children() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceAround,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_fixed_child(),
+                create_fixed_child(),
+                create_fixed_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let spacing = (100.0 - 30.0) / 3.0;
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((spacing * 0.5, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((10.0 + spacing * 1.5, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((20.0 + spacing * 2.5, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_space_around_with_flex_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceAround,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_flex_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_space_around_with_flex_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceAround,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_flex_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_space_around_with_three_flex_children() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceAround,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_flex_child(),
+                create_flex_child(),
+                create_flex_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let size = 100.0 / 3.0;
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, size), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_space_around_with_three_flex_children() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceAround,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_flex_child(),
+                create_flex_child(),
+                create_flex_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let size = 100.0 / 3.0;
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((size, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
+                ..flex_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_space_evenly_with_fixed_child() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceEvenly,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_space_evenly_with_fixed_child() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceEvenly,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![create_fixed_child()],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_space_evenly_with_three_fixed_children() {
+        let column = FlexGroup {
+            axis: Axis::Vertical,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceEvenly,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_fixed_child(),
+                create_fixed_child(),
+                create_fixed_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&column, &constraints);
+        let spacing = (100.0 - 30.0) / 4.0;
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((0.0, spacing), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 10.0 + spacing * 2.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((0.0, 20.0 + spacing * 3.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((10.0, 100.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_space_evenly_with_three_fixed_children() {
+        let row = FlexGroup {
+            axis: Axis::Horizontal,
+            main_axis_size: MainAxisSize::Max,
+            main_axis_alignment: MainAxisAlignment::SpaceEvenly,
+            cross_axis_alignment: CrossAxisAlignment::Start,
+            children: vec![
+                create_fixed_child(),
+                create_fixed_child(),
+                create_fixed_child(),
+            ],
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&row, &constraints);
+        let spacing = (100.0 - 30.0) / 4.0;
+        let expected_layout = vec![
+            LayoutBox {
+                rect: Rect::from_pos((spacing, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((10.0 + spacing * 2.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_pos((20.0 + spacing * 3.0, 0.0), (10.0, 10.0)),
+                ..fixed_child_lbox()
+            },
+            LayoutBox {
+                rect: Rect::from_size((100.0, 10.0)),
+                children: vec![0, 1, 2],
+                material: Material::None,
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    fn vertical_main_axis_alignment_space_evenly_with_flex_child() {
+        // TODO
+    }
+
+    #[test]
+    fn horizontal_main_axis_alignment_space_evenly_with_flex_child() {
+        // TODO
+    }
+
+    // --------------------------------------------------
+    // Cross axis alignment
+    // --------------------------------------------------
+
+    #[test]
+    fn vertical_cross_axis_alignment_start_with_fixed_child() {
+        // TODO
+    }
+
+    #[test]
+    fn horizontal_cross_axis_alignment_start_with_fixed_child() {
+        // TODO
+    }
+
+    #[test]
+    fn vertical_cross_axis_alignment_start_with_flex_child() {
+        // TODO
+    }
+
+    #[test]
+    fn horizontal_cross_axis_alignment_start_with_flex_child() {
+        // TODO
+    }
+
+    #[test]
+    fn vertical_cross_axis_alignment_end_with_fixed_child() {
+        // TODO
+    }
+
+    #[test]
+    fn horizontal_cross_axis_alignment_end_with_fixed_child() {
+        // TODO
+    }
+
+    #[test]
+    fn vertical_cross_axis_alignment_end_with_flex_child() {
+        // TODO
+    }
+
+    #[test]
+    fn horizontal_cross_axis_alignment_end_with_flex_child() {
+        // TODO
+    }
+
+    #[test]
+    fn vertical_cross_axis_alignment_stretch_with_fixed_child() {
+        // TODO
+    }
+
+    #[test]
+    fn horizontal_cross_axis_alignment_stretch_with_fixed_child() {
+        // TODO
+    }
+
+    #[test]
+    fn vertical_cross_axis_alignment_stretch_with_flex_child() {
+        // TODO
+    }
+
+    #[test]
+    fn horizontal_cross_axis_alignment_stretch_with_flex_child() {
+        // TODO
+    }
+
+    // --------------------------------------------------
+    // Helpers
+    // --------------------------------------------------
+
+    fn layout_with_constraints(
+        widget: &dyn Layout,
+        constraints: &BoxConstraints,
+    ) -> Vec<LayoutBox> {
+        let mut tree = LayoutTree::new();
+        let sbox = widget.layout(&mut tree, constraints);
+        let lbox = LayoutBox::from_child(sbox, Vector2::zero());
+        tree.insert(lbox);
+        tree.boxes
+    }
+
+    fn create_fixed_child() -> Flex {
+        Flex::Fixed {
+            child: Box::new(widget::Rect {
+                size: (10.0, 10.0).into(),
+                color: Color::transparent(),
+            }),
+        }
+    }
+
+    fn fixed_child_lbox() -> LayoutBox {
+        LayoutBox {
+            rect: Rect::from_size((10.0, 10.0)),
+            children: vec![],
+            material: Material::Solid(Color::transparent()),
+        }
+    }
+
+    fn create_flex_child() -> Flex {
+        Flex::Flexible {
+            flex: 1.0,
+            child: Box::new(widget::Rect {
+                size: (10.0, 10.0).into(),
+                color: Color::transparent(),
+            }),
+        }
+    }
+
+    fn flex_child_lbox() -> LayoutBox {
+        LayoutBox {
+            rect: Rect::from_size((10.0, 10.0)),
+            children: vec![],
+            material: Material::Solid(Color::transparent()),
         }
     }
 }

@@ -14,7 +14,7 @@ macro_rules! vector2 {
 
 /// A 2-dimensional vector.
 #[repr(C)]
-#[derive(PartialOrd, PartialEq, Copy, Clone, Debug, Pod, Zeroable)]
+#[derive(PartialOrd, Copy, Clone, Debug, Pod, Zeroable)]
 pub struct Vector2 {
     /// The x component of the vector.
     pub x: f32,
@@ -156,6 +156,16 @@ impl Default for Vector2 {
         Vector2::zero()
     }
 }
+
+impl PartialEq for Vector2 {
+    fn eq(&self, rhs: &Vector2) -> bool {
+        let eq_x = (self.x - rhs.x).abs() <= f32::EPSILON;
+        let eq_y = (self.y - rhs.y).abs() <= f32::EPSILON;
+        eq_x && eq_y
+    }
+}
+
+impl Eq for Vector2 {}
 
 impl Neg for Vector2 {
     type Output = Vector2;

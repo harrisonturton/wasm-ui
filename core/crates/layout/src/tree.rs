@@ -23,6 +23,23 @@ pub trait Layout: Debug {
     fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox;
 }
 
+// The minimum and maximum dimensions that a [SizedLayoutBox] or a [LayoutBox]
+// can be.
+#[derive(PartialEq, Clone, Debug)]
+pub struct BoxConstraints {
+    pub min: Vector2,
+    pub max: Vector2,
+}
+
+impl BoxConstraints {
+    pub fn from_max<I: Into<Vector2>>(max: I) -> BoxConstraints {
+        BoxConstraints {
+            min: Vector2::zero(),
+            max: max.into(),
+        }
+    }
+}
+
 /// Used to get a [LayoutBox] from a [LayoutTree].
 ///
 /// This is required because [LayoutTree] is implemented using a memory arena in
@@ -46,14 +63,6 @@ pub struct LayoutBox {
     pub rect: Rect,
     pub children: Vec<LayoutBoxId>,
     pub material: Material,
-}
-
-// The minimum and maximum dimensions that a [SizedLayoutBox] or a [LayoutBox]
-// can be.
-#[derive(PartialEq, Clone, Debug)]
-pub struct BoxConstraints {
-    pub min: Vector2,
-    pub max: Vector2,
 }
 
 impl LayoutBox {
