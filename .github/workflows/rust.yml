@@ -1,0 +1,22 @@
+name: Rust
+
+on: [push, pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - run: cargo test
+        working-directory: ./core
+      - run: wasm-pack test --headless --chrome
+        working-directory: ./core
+      - run: wasm-pack test --headless --firefox
+        working-directory: ./core
