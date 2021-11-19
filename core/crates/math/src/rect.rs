@@ -22,7 +22,7 @@ impl Rect {
             max: Vector2::zero(),
         }
     }
-    
+
     pub fn from_pos<I: Into<Vector2>>(pos: I, size: I) -> Self {
         let pos = pos.into();
         Self {

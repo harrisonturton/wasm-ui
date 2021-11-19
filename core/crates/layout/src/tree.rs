@@ -65,6 +65,8 @@ pub struct LayoutBox {
     pub material: Material,
 }
 
+impl Eq for LayoutBox {}
+
 impl LayoutBox {
     /// Convenience method to turn a [SizedLayoutBox] into a [LayoutBox]. This
     /// is handy when implementing the [Layout] trait.
@@ -172,6 +174,7 @@ impl<'a> Iterator for LayoutTreeIterator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Color;
 
     #[test]
     fn layout_tree_iter_nested() {
@@ -268,6 +271,27 @@ mod tests {
         ];
         for (i, _) in actual.iter().enumerate() {
             assert_eq!(expected[i], actual[i])
+        }
+    }
+
+    #[test]
+    fn lbox_partial_eq_with_different_materials_returns_false() {
+        let lbox_a = LayoutBox {
+            material: Material::Solid(Color::red()),
+            ..a_layout_box()
+        };
+        let lbox_b = LayoutBox {
+            material: Material::Solid(Color::green()),
+            ..a_layout_box()
+        };
+        assert_ne!(lbox_a, lbox_b);
+    }
+
+    fn a_layout_box() -> LayoutBox {
+        LayoutBox {
+            rect: Rect::from_size((10.0, 10.0)),
+            children: vec![],
+            material: Material::Solid(Color::transparent()),
         }
     }
 }

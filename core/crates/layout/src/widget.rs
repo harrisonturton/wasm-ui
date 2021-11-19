@@ -339,3 +339,29 @@ impl Color {
         Vector4::new(r, g, b, a)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn color_partial_eq_with_same_color_returns_true() {
+        let red_lhs = Color::red();
+        let red_rhs = Color::red();
+        assert_eq!(red_lhs, red_rhs);
+    }
+
+    #[test]
+    fn color_partial_eq_with_different_color_returns_false() {
+        let red = Color::red();
+        let green = Color::green();
+        assert_ne!(red, green);
+    }
+
+    #[test]
+    fn material_partial_eq_with_different_color_returns_false() {
+        let red = Material::Solid(Color::red());
+        let green = Material::Solid(Color::green());
+        assert_ne!(red, green);
+    }
+}
