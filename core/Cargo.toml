@@ -3,6 +3,7 @@ members = [
   "crates/math",
   "crates/platform",
   "crates/layout",
+  "crates/test_util",
 ]
 
 [package]

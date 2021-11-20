@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 math = { path = "../math" }
+
+[dev-dependencies]
+test_util = { path = "../test_util" }

@@ -6,5 +6,5 @@ pub use tree::*;
 mod widget;
 pub use widget::*;
 
-mod column;
-pub use column::*;
+mod flex;
+pub use flex::*;
