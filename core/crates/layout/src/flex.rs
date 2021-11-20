@@ -83,8 +83,7 @@ pub enum Flex {
 impl Layout for Flex {
     fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
         let child = match self {
-            Flex::Flexible { child, .. } => child,
-            Flex::Fixed { child } => child,
+            Flex::Flexible { child, .. } | Flex::Fixed { child } => child,
         };
         child.layout(tree, constraints)
     }
@@ -95,6 +94,7 @@ impl Layout for Flex {
 // --------------------------------------------------
 
 #[derive(Debug)]
+#[allow(clippy::module_name_repetitions)]
 pub struct FlexGroup {
     pub axis: Axis,
     pub main_axis_size: MainAxisSize,
@@ -146,7 +146,7 @@ impl Layout for FlexGroup {
         }
 
         // Now we can determine the relative sizing of the flexible widgets
-        let (_, main_max) = self.main_axis_constraint(constraints).into();
+        let (main_min, main_max) = self.main_axis_constraint(constraints).into();
         let free_space = main_max - sum_fixed_size;
         let space_per_flex = free_space / sum_flex_factor;
 
@@ -212,7 +212,6 @@ impl Layout for FlexGroup {
             }
             CrossAxisAlignment::Start => max_cross_size,
         };
-        let (main_min, main_max) = self.main_axis_constraint(constraints).into();
         let main_size = match self.main_axis_size {
             MainAxisSize::Min => total_size.clamp(main_min, main_max),
             MainAxisSize::Max => main_max,
@@ -295,6 +294,7 @@ impl FlexGroup {
         self.align_constraints(main_constraint, cross_constraint)
     }
 
+    #[allow(clippy::cast_precision_loss)]
     fn child_main_axis_position(
         &self,
         constraints: &BoxConstraints,
@@ -377,14 +377,14 @@ impl FlexGroup {
 /// cases, this test module uses the following format:
 ///
 /// 1. Feature section header
-/// 2. "flex_group_vertical_{parameter name}_with_fixed_child
-/// 3. "flex_group_horizontal_{parameter name}_with_fixed_child
-/// 4. "flex_group_vertical_{parameter name}_with_three_fixed_children
-/// 5. "flex_group_horizontal_{parameter name}_with_three_fixed_children
-/// 6. "flex_group_vertical_{parameter name}_with_flex_child
-/// 7. "flex_group_horizontal_{parameter name}_with_flex_child
-/// 8. "flex_group_vertical_{parameter name}_with_three_flex_children
-/// 9. "flex_group_horizontal_{parameter name}_with_three_flex_children
+/// 2. `flex_group_vertical_{parameter name}_with_fixed_child`
+/// 3. `flex_group_horizontal_{parameter name}_with_fixed_child`
+/// 4. `flex_group_vertical_{parameter name}_with_three_fixed_children`
+/// 5. `flex_group_horizontal_{parameter name}_with_three_fixed_children`
+/// 6. `flex_group_vertical_{parameter name}_with_flex_child`
+/// 7. `flex_group_horizontal_{parameter name}_with_flex_child`
+/// 8. `flex_group_vertical_{parameter name}_with_three_flex_children`
+/// 9. `flex_group_horizontal_{parameter name}_with_three_flex_children`
 ///
 /// In other words, alternative between the following units under test:
 ///

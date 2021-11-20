@@ -6,14 +6,14 @@ use std::fmt::Debug;
 /// This is the essential trait of the box model. It is implemented by all
 /// components that undergo the box layout process.
 ///
-/// The `layout` method is called repeatedly to generate a [LayoutTree]. Each
+/// The `layout` method is called repeatedly to generate a `LayoutTree`. Each
 /// tree node is responsible for three things:
 ///
 /// 1. Calculating the position of it's children
-/// 2. Inserting it's children into the [LayoutTree]
+/// 2. Inserting it's children into the `LayoutTree`
 /// 3. Calculating and returning it's own size to it's parent node
 ///
-/// This allows the [LayoutTree] to be generated in one walk down and up the
+/// This allows the `LayoutTree` to be generated in one walk down and up the
 /// tree. It's how we can perform layout in O(2n) time.
 ///
 /// This process takes heavy inspiration from the [Flutter render
@@ -40,12 +40,12 @@ impl BoxConstraints {
     }
 }
 
-/// Used to get a [LayoutBox] from a [LayoutTree].
+/// Used to get a `LayoutBox` from a `LayoutTree`.
 ///
-/// This is required because [LayoutTree] is implemented using a memory arena in
+/// This is required because `LayoutTree` is implemented using a memory arena in
 /// order to play nice with the borrow-checker. It's easier to pass around a
 /// copyable value like `usize` than worry about balancing reference lifetimes
-/// and shared ownership, and it's more efficient than copying [LayoutBox].
+/// and shared ownership, and it's more efficient than copying `LayoutBox`.
 pub type LayoutBoxId = usize;
 
 /// An element that has calculated it's own size, but has not been positioned
@@ -68,7 +68,7 @@ pub struct LayoutBox {
 impl Eq for LayoutBox {}
 
 impl LayoutBox {
-    /// Convenience method to turn a [SizedLayoutBox] into a [LayoutBox]. This
+    /// Convenience method to turn a `SizedLayoutBox` into a `LayoutBox`. This
     /// is handy when implementing the [Layout] trait.
     pub fn from_child<I>(child: SizedLayoutBox, pos: I) -> LayoutBox
     where
@@ -84,14 +84,15 @@ impl LayoutBox {
     }
 }
 
-/// A tree of [LayoutBox] elements. The position of each [LayoutBox] is relative
+/// A tree of `LayoutBox` elements. The position of each `LayoutBox` is relative
 /// to it's parent.
 ///
 /// This is the data structure that is consumed by the render driver to show on
 /// the screen. It is intended to be generic across different deploy targets.
 ///
 /// The tree is implemented as a memory arena to be indexed into using a
-/// [LayoutBoxId]. This makes it much easier to use with the borrow checker.
+/// `LayoutBoxId`. This makes it much easier to use with the borrow checker.
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Default, Debug)]
 pub struct LayoutTree {
     pub root: Option<LayoutBoxId>,
@@ -99,7 +100,8 @@ pub struct LayoutTree {
 }
 
 impl LayoutTree {
-    /// Create a new empty [LayoutTree].
+    /// Create a new empty `LayoutTree`.
+    #[must_use]
     pub fn new() -> LayoutTree {
         LayoutTree {
             root: None,
@@ -107,25 +109,27 @@ impl LayoutTree {
         }
     }
 
-    /// Set the root of the tree. This assumes that the [LayoutBoxId] provided
-    /// by the caller points to a valid [LayoutBox].
+    /// Set the root of the tree. This assumes that the `LayoutBoxId` provided
+    /// by the caller points to a valid `LayoutBox`.
     pub fn set_root(&mut self, root: Option<LayoutBoxId>) {
         self.root = root;
     }
 
-    /// Insert a [LayoutBox] into the tree and get a [LayoutBoxId] to fetch it
+    /// Insert a `LayoutBox` into the tree and get a `LayoutBoxId` to fetch it
     /// again later.
     pub fn insert(&mut self, lbox: LayoutBox) -> LayoutBoxId {
         self.boxes.push(lbox);
         self.boxes.len() - 1
     }
 
-    /// Get a reference to the [LayoutBox] indexed by a [LayoutBoxId].
+    /// Get a reference to the `LayoutBox` indexed by a `LayoutBoxId`.
+    #[must_use]
     pub fn get(&self, id: LayoutBoxId) -> Option<&LayoutBox> {
         self.boxes.get(id)
     }
 
     /// Get an iterator over a breadth-first search
+    #[must_use]
     pub fn iter(&self) -> LayoutTreeIterator {
         LayoutTreeIterator {
             tree: self,
@@ -134,7 +138,7 @@ impl LayoutTree {
                 None => VecDeque::new(),
             },
             offsets: match self.root {
-                Some(root) => VecDeque::from([Vector2::zero()]),
+                Some(_) => VecDeque::from([Vector2::zero()]),
                 None => VecDeque::new(),
             },
             remaining: match self.root {
@@ -217,7 +221,7 @@ mod tests {
             (&b, &a, Vector2::new(6.0, 6.0)),
         ];
         for (i, _) in actual.iter().enumerate() {
-            assert_eq!(expected[i], actual[i])
+            assert_eq!(expected[i], actual[i]);
         }
     }
 
@@ -270,7 +274,7 @@ mod tests {
             (&b, &b_child, Vector2::new(5.0, 5.0)),
         ];
         for (i, _) in actual.iter().enumerate() {
-            assert_eq!(expected[i], actual[i])
+            assert_eq!(expected[i], actual[i]);
         }
     }
 

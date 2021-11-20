@@ -91,10 +91,12 @@ pub struct EdgeInsets {
 }
 
 impl EdgeInsets {
+    #[must_use]
     pub fn zero() -> EdgeInsets {
         EdgeInsets::all(0.0)
     }
 
+    #[must_use]
     pub fn all(inset: f32) -> EdgeInsets {
         EdgeInsets {
             top: inset,
@@ -104,6 +106,7 @@ impl EdgeInsets {
         }
     }
 
+    #[must_use]
     pub fn vertical(inset: f32) -> EdgeInsets {
         EdgeInsets {
             top: inset,
@@ -113,6 +116,7 @@ impl EdgeInsets {
         }
     }
 
+    #[must_use]
     pub fn horizontal(inset: f32) -> EdgeInsets {
         EdgeInsets {
             top: 0.0,
@@ -122,6 +126,7 @@ impl EdgeInsets {
         }
     }
 
+    #[must_use]
     pub fn top(inset: f32) -> EdgeInsets {
         EdgeInsets {
             top: inset,
@@ -131,6 +136,7 @@ impl EdgeInsets {
         }
     }
 
+    #[must_use]
     pub fn bottom(inset: f32) -> EdgeInsets {
         EdgeInsets {
             top: 0.0,
@@ -140,6 +146,7 @@ impl EdgeInsets {
         }
     }
 
+    #[must_use]
     pub fn left(inset: f32) -> EdgeInsets {
         EdgeInsets {
             top: 0.0,
@@ -149,6 +156,7 @@ impl EdgeInsets {
         }
     }
 
+    #[must_use]
     pub fn right(inset: f32) -> EdgeInsets {
         EdgeInsets {
             top: 0.0,
@@ -158,10 +166,12 @@ impl EdgeInsets {
         }
     }
 
+    #[must_use]
     pub fn min(&self) -> Vector2 {
         Vector2::new(self.left, self.top)
     }
 
+    #[must_use]
     pub fn max(&self) -> Vector2 {
         Vector2::new(self.right, self.bottom)
     }
@@ -250,7 +260,7 @@ pub struct Rect {
 }
 
 impl Layout for Rect {
-    fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
+    fn layout(&self, _: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
         SizedLayoutBox {
             size: Vector2::new(
                 self.size.x.clamp(constraints.min.x, constraints.max.x),
@@ -294,43 +304,53 @@ impl Default for Color {
 }
 
 impl Color {
+    #[must_use]
     pub fn rgba(r: f32, g: f32, b: f32, a: f32) -> Color {
         Color { r, g, b, a }
     }
 
+    #[must_use]
     pub fn transparent() -> Color {
         Color::rgba(0.0, 0.0, 0.0, 0.0)
     }
 
+    #[must_use]
     pub fn red() -> Color {
         Color::rgba(255.0, 0.0, 0.0, 255.0)
     }
 
+    #[must_use]
     pub fn green() -> Color {
         Color::rgba(0.0, 255.0, 0.0, 255.0)
     }
 
+    #[must_use]
     pub fn blue() -> Color {
         Color::rgba(0.0, 0.0, 255.0, 255.0)
     }
 
+    #[must_use]
     pub fn yellow() -> Color {
         Color::rgba(255.0, 255.0, 0.0, 255.0)
     }
 
+    #[must_use]
     pub fn white() -> Color {
         Color::rgba(255.0, 255.0, 255.0, 255.0)
     }
 
+    #[must_use]
     pub fn black() -> Color {
         Color::rgba(0.0, 0.0, 0.0, 255.0)
     }
 
     // The alpha is between 0 and 1
+    #[must_use]
     pub fn alpha(self, alpha: f32) -> Color {
         Color::rgba(self.r, self.g, self.b, alpha * 255.0)
     }
 
+    #[must_use]
     pub fn to_linear(&self) -> Vector4 {
         let r = self.r / 255.0;
         let g = self.g / 255.0;

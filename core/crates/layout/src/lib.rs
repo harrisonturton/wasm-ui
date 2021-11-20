@@ -1,4 +1,5 @@
-#![warn(clippy::all)]
+#![warn(clippy::all, clippy::pedantic)]
+#![allow(clippy::similar_names)]
 
 mod tree;
 pub use tree::*;

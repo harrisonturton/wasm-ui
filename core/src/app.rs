@@ -1,6 +1,6 @@
 use layout::{
-    FlexGroup, Axis, Center, Color, Container, CrossAxisAlignment, EdgeInsets, Flex, Layout, MainAxisAlignment,
-    MainAxisSize, Positioned, Stack,
+    Axis, Center, Color, Container, CrossAxisAlignment, EdgeInsets, Flex, FlexGroup, Layout,
+    MainAxisAlignment, MainAxisSize, Positioned, Stack,
 };
 use math::Vector2;
 use platform::AppDriver;
@@ -45,7 +45,7 @@ impl App {
                                         margin: EdgeInsets::bottom(15.0),
                                         color: Color::red(),
                                         ..Default::default()
-                                    })
+                                    }),
                                 },
                                 Flex::Fixed {
                                     child: Box::new(Container {
@@ -53,9 +53,9 @@ impl App {
                                         margin: EdgeInsets::bottom(15.0),
                                         color: Color::red(),
                                         ..Default::default()
-                                    })
+                                    }),
                                 },
-                            ]
+                            ],
                         })),
                         ..Default::default()
                     }),
@@ -66,8 +66,8 @@ impl App {
                         color: Color::blue().alpha(0.05),
                         ..Default::default()
                     }),
-                }
-            ]
+                },
+            ],
         };
         Box::new(widgets)
     }
