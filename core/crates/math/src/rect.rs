@@ -11,11 +11,12 @@ pub struct Rect {
 impl Rect {
     /// Construct a new vector that starts at the point described by `min` and
     /// ends at the point described by `max`.
-    #[inline]
+    #[must_use]
     pub fn new(min: Vector2, max: Vector2) -> Self {
         Self { min, max }
     }
 
+    #[must_use]
     pub fn zero() -> Self {
         Self {
             min: Vector2::zero(),
@@ -23,6 +24,7 @@ impl Rect {
         }
     }
 
+    #[must_use]
     pub fn from_pos<I: Into<Vector2>>(pos: I, size: I) -> Self {
         let pos = pos.into();
         Self {
@@ -31,6 +33,7 @@ impl Rect {
         }
     }
 
+    #[must_use]
     pub fn from_size<I: Into<Vector2>>(max: I) -> Self {
         Self {
             min: Vector2::zero(),
@@ -39,7 +42,7 @@ impl Rect {
     }
 
     /// Get the width and height of the rectangle.
-    #[inline]
+    #[must_use]
     pub fn size(self) -> Vector2 {
         let width = self.max.x - self.min.x;
         let height = self.max.y - self.min.y;
@@ -47,13 +50,13 @@ impl Rect {
     }
 
     /// Move the rectangle by the provided amount.
-    #[inline]
+    #[must_use]
     pub fn translate(self, amount: Vector2) -> Rect {
         Rect::new(self.min + amount, self.max + amount)
     }
 
     /// Check if the rectangle intersects a point.
-    #[inline]
+    #[must_use]
     pub fn intersects(self, point: Vector2) -> bool {
         let intersects_x = self.min.x < point.x && point.x < self.max.x;
         let intersects_y = self.min.y < point.y && point.y < self.max.y;

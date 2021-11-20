@@ -1,4 +1,4 @@
-#![warn(clippy::all)]
+#![warn(clippy::all, clippy::pedantic)]
 
 mod vector2;
 pub use vector2::*;
