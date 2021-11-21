@@ -1,14 +1,16 @@
 use super::{BoxConstraints, Layout, LayoutBox, LayoutTree, Material, SizedLayoutBox};
 use math::Vector2;
+use std::collections::VecDeque;
 use std::fmt::Debug;
 
-// --------------------------------------------------
-// Axis
-// --------------------------------------------------
-
+// What direction the flex container should face.
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum Axis {
+    // Place items in a row. The main axis is the `x` axis, and the cross axis
+    // is the `y` axis.
     Horizontal,
+    // Place items in a column. The main axis is the `y` axis, and the cross
+    // axis is the `x` axis.
     Vertical,
 }
 
@@ -18,11 +20,10 @@ impl Default for Axis {
     }
 }
 
-// --------------------------------------------------
-// Axis Alignment
-// --------------------------------------------------
-
-#[derive(Copy, Clone, Debug)]
+// How the children of a flex container should be aligned along the main axis.
+// For a vertical container, this is their vertical position. For a horizontal
+// container, this is their horizontal position.
+#[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum MainAxisAlignment {
     Start,
     End,
@@ -38,11 +39,18 @@ impl Default for MainAxisAlignment {
     }
 }
 
+// How the children of a flex container should be aligned along the cross axis.
+// For a vertical container, this is their horizontal position. For a horizontal
+// container, this is their vertical position.
 #[derive(Copy, Clone, Debug)]
 pub enum CrossAxisAlignment {
+    // Push children to the start of the container
     Start,
+    // Push children to the end of the container
     End,
+    // Stretch children to fill the container
     Stretch,
+    // Position children in the center
     Center,
 }
 
@@ -52,13 +60,12 @@ impl Default for CrossAxisAlignment {
     }
 }
 
-// --------------------------------------------------
-// Axis Size
-// --------------------------------------------------
-
-#[derive(Copy, Clone, Debug)]
+// How large the flex widget should be along the main axis.
+#[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum MainAxisSize {
+    // Stretch to fill container
     Max,
+    // Shrink to fit children
     Min,
 }
 
@@ -68,44 +75,67 @@ impl Default for MainAxisSize {
     }
 }
 
-// --------------------------------------------------
-// Flex children
-// --------------------------------------------------
+// This trait enables a child to provide it's flex factor to the parent widget
+// so the parent can calculate the correct `BoxConstraint`. If the flex factor
+// is `None`, then it is not a flexible widget.
+//
+// This is implemented as a trait so that it can be impl'd as a metatrait on
+// `Box<dyn Layout>`, which enables `Layout` types to be used as children of
+// flex containers that only accept `FlexLayout` children.
+pub trait FlexLayout: Debug {
+    // The relative area that this flexible widget should grow to, relative to
+    // other flexible widgets.
+    fn flex_factor(&self) -> Option<f32>;
 
-// Wraps a child of the [FlexGroup] when it should grow. This purely exists to
-// add the provide the flex factor value `flex` during layout.
-#[derive(Debug)]
-pub enum Flex {
-    Flexible { flex: f32, child: Box<dyn Layout> },
-    Fixed { child: Box<dyn Layout> },
+    fn flex_layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox;
 }
 
-impl Layout for Flex {
-    fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
-        let child = match self {
-            Flex::Flexible { child, .. } | Flex::Fixed { child } => child,
-        };
-        child.layout(tree, constraints)
+// All existing widgets have a flex factor of 0, meaning they are not flexible,
+// and have a fixed size.
+impl<T> FlexLayout for T
+where
+    T: Layout,
+{
+    fn flex_factor(&self) -> Option<f32> {
+        None
+    }
+
+    fn flex_layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
+        self.layout(tree, constraints)
     }
 }
 
-// --------------------------------------------------
-// FlexGroup
-// --------------------------------------------------
-
+// `Flexible` is used to provide the flex factor to the flex container in order for
+// it to calculate the correct `BoxConstraints` for the flexible child.
 #[derive(Debug)]
-#[allow(clippy::module_name_repetitions)]
-pub struct FlexGroup {
+pub struct Flexible {
+    pub flex_factor: f32,
+    pub child: Box<dyn Layout>,
+}
+
+impl FlexLayout for Flexible {
+    fn flex_factor(&self) -> Option<f32> {
+        Some(self.flex_factor)
+    }
+
+    fn flex_layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
+        self.child.layout(tree, constraints)
+    }
+}
+
+// A container that sizes and positions its children like CSS flexbox.
+#[derive(Debug)]
+pub struct Flex {
     pub axis: Axis,
     pub main_axis_size: MainAxisSize,
     pub main_axis_alignment: MainAxisAlignment,
     pub cross_axis_alignment: CrossAxisAlignment,
-    pub children: Vec<Flex>,
+    pub children: Vec<Box<dyn FlexLayout>>,
 }
 
-impl Default for FlexGroup {
-    fn default() -> FlexGroup {
-        FlexGroup {
+impl Default for Flex {
+    fn default() -> Flex {
+        Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -115,112 +145,113 @@ impl Default for FlexGroup {
     }
 }
 
-impl Layout for FlexGroup {
+impl Layout for Flex {
     fn layout(&self, tree: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
-        let mut sum_fixed_size = 0.0; // Along the main axis
-        let mut sum_flex_factor = 0.0;
+        let (main_min, main_max) = self.main_axis_constraint(constraints);
+        let (_, cross_max) = self.cross_axis_constraint(constraints);
 
-        // Keep track of the children that have already undergone layout
-        let mut sbox_cache: Vec<(&Flex, Option<SizedLayoutBox>)> = vec![];
+        let mut total_main_size = 0.0;
+        let mut total_cross_size = 0.0;
+
+        // Keep track of the children that have already undergone layout.
+        // `VecDeque` because we need `pop_front` later.
+        let mut layout_cache: VecDeque<(&Box<dyn FlexLayout>, Option<SizedLayoutBox>)> =
+            VecDeque::new();
 
         // Do two passes over the children. The first pass calculates the total
-        // size (along the main axis) taken up by the [Flex::Fixed] children.
-        // This is needed to determine how much space if left for the
-        // [Flex::Flexible] children to use.
-        let mut max_cross_size = 0.0;
+        // main axis size of the fixed-size children. We must do this to
+        // calculate how much space is left over for the flexible children to
+        // grow into.
+        let mut sum_inflexible_size = 0.0;
+        let mut sum_flex_factor = 0.0;
         for child in &self.children {
-            match child {
-                Flex::Fixed { .. } => {
-                    let constraints = self.fixed_child_constraints(constraints);
-                    let sbox = child.layout(tree, &constraints);
-                    sum_fixed_size += self.child_main_axis_size(&sbox);
-                    let cross_size = self.child_cross_axis_size(&sbox);
-                    max_cross_size = f32::max(max_cross_size, cross_size);
-                    sbox_cache.push((child, Some(sbox)));
+            // Skip layout for flex children, but keep track of them for later
+            if let Some(flex_factor) = child.flex_factor() {
+                // Treat 0-flex widgets as inflexible
+                if flex_factor > 0.0 {
+                    sum_flex_factor += flex_factor;
+                    layout_cache.push_back((child, None));
+                    continue;
                 }
-                Flex::Flexible { flex, .. } => {
-                    sum_flex_factor += flex;
-                    sbox_cache.push((child, None));
-                }
-            };
-        }
-
-        // Now we can determine the relative sizing of the flexible widgets
-        let (main_min, main_max) = self.main_axis_constraint(constraints).into();
-        let free_space = main_max - sum_fixed_size;
-        let space_per_flex = free_space / sum_flex_factor;
-
-        // The second pass will size all the [Flex::Flexible] children.
-        let mut total_size = sum_fixed_size;
-        for child in &mut sbox_cache {
-            if let (Flex::Flexible { flex, .. }, None) = child {
-                let main_axis_size = flex * space_per_flex;
-                let constraints = if *flex > 0.0 {
-                    self.flex_child_constraints(constraints, main_axis_size)
-                } else {
-                    self.fixed_child_constraints(constraints)
-                };
-                let sbox = child.0.layout(tree, &constraints);
-                let size = sbox.size;
-                let cross_size = self.child_cross_axis_size(&sbox);
-                max_cross_size = f32::max(max_cross_size, cross_size);
-                child.1 = Some(sbox);
-                total_size += match self.axis {
-                    Axis::Horizontal => size.x,
-                    Axis::Vertical => size.y,
-                };
             }
+
+            let constraints = self.inflexible_child_constraints(constraints);
+            let sbox = child.flex_layout(tree, &constraints);
+            let size = sbox.size;
+            layout_cache.push_back((child, Some(sbox)));
+
+            let main_size = self.main_axis_size(size);
+            let cross_size = self.cross_axis_size(size);
+            sum_inflexible_size += main_size;
+            total_main_size += main_size;
+            total_cross_size = f32::max(cross_size, total_cross_size);
         }
 
-        // Finally, we can determine their positions
-        let mut children = vec![];
-        let mut current_main_size = 0.0;
+        // Now we can determine the relative sizing of the flex widgets
+        let free_space = main_max - sum_inflexible_size;
+        let space_per_flex_factor = free_space / sum_flex_factor;
 
-        let sboxes = sbox_cache.iter().filter_map(|(_, sbox)| sbox.as_ref());
-        for (i, sbox) in sboxes.enumerate() {
-            let cross_size = self.child_cross_axis_size(sbox);
-            let main_size = self.child_main_axis_size(sbox);
-            let cross_pos = self.child_cross_axis_position(constraints, cross_size, max_cross_size);
+        // The second pass will layout all flexible children.
+        for (child, maybe_sbox) in &mut layout_cache {
+            let flex_factor = match child.flex_factor() {
+                // 0-flex widgets have already been treated as inflexible, and
+                // laid out in the first pass, so we can skip them here.
+                Some(flex_factor) if flex_factor > 0.0 => flex_factor,
+                _ => continue,
+            };
+
+            let main_axis_size = flex_factor * space_per_flex_factor;
+            let constraints = self.flex_child_constraints(constraints, main_axis_size);
+            let sbox = child.flex_layout(tree, &constraints);
+            let size = sbox.size;
+            *maybe_sbox = Some(sbox);
+
+            let main_size = self.main_axis_size(size);
+            total_main_size += main_size;
+            let cross_size = self.cross_axis_size(size);
+            total_cross_size = f32::max(cross_size, total_cross_size);
+        }
+
+        // We now have enough information to position the children
+        let num_children = layout_cache.len();
+        let mut children = vec![];
+        let mut current_total_main_size = 0.0;
+
+        let mut i = 0;
+        while let Some((_, Some(sbox))) = layout_cache.pop_front() {
+            let cross_size = self.cross_axis_size(sbox.size);
+            let main_size = self.main_axis_size(sbox.size);
+
+            let cross_pos =
+                self.child_cross_axis_position(constraints, cross_size, total_cross_size);
             let main_pos = self.child_main_axis_position(
                 constraints,
-                total_size,
+                total_main_size,
+                current_total_main_size,
                 main_size,
-                sbox_cache.len(),
+                num_children,
                 i,
-                current_main_size,
             );
-            let pos = match self.axis {
-                Axis::Vertical => Vector2::new(cross_pos, main_pos),
-                Axis::Horizontal => Vector2::new(main_pos, cross_pos),
-            };
-
-            let lbox = LayoutBox::from_child(sbox.clone(), pos);
+            let pos = self.align_to_axis(main_pos, cross_pos);
+            let lbox = LayoutBox::from_child(sbox, pos);
             let id = tree.insert(lbox);
             children.push(id);
-            max_cross_size = f32::max(max_cross_size, cross_size);
-            current_main_size += match self.main_axis_alignment {
+            current_total_main_size += match self.main_axis_alignment {
                 MainAxisAlignment::End => main_size,
-                _ => main_pos - current_main_size + main_size,
+                _ => main_pos + main_size - current_total_main_size,
             };
+            i += 1;
         }
 
-        //let cross_size = max_cross_size;
-        let (_, cross_max) = self.cross_axis_constraint(constraints).into();
         let cross_size = match self.cross_axis_alignment {
-            CrossAxisAlignment::Stretch | CrossAxisAlignment::Center | CrossAxisAlignment::End => {
-                cross_max
-            }
-            CrossAxisAlignment::Start => max_cross_size,
+            CrossAxisAlignment::Start => total_cross_size,
+            _ => cross_max,
         };
         let main_size = match self.main_axis_size {
-            MainAxisSize::Min => total_size.clamp(main_min, main_max),
+            MainAxisSize::Min => total_main_size.clamp(main_min, main_max),
             MainAxisSize::Max => main_max,
         };
-        let size = match self.axis {
-            Axis::Horizontal => Vector2::new(main_size, cross_size),
-            Axis::Vertical => Vector2::new(cross_size, main_size),
-        };
-
+        let size = self.align_to_axis(main_size, cross_size);
         SizedLayoutBox {
             size,
             children,
@@ -229,30 +260,119 @@ impl Layout for FlexGroup {
     }
 }
 
-impl FlexGroup {
-    // Calculate the min and max constraints along the main axis
-    fn main_axis_constraint(&self, constraints: &BoxConstraints) -> Vector2 {
-        match self.axis {
-            Axis::Horizontal => Vector2::new(constraints.min.x, constraints.max.x),
-            Axis::Vertical => Vector2::new(constraints.min.y, constraints.max.y),
+impl Flex {
+    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+    fn child_main_axis_position(
+        &self,
+        constraints: &BoxConstraints,
+        total_main_axis_size: f32,
+        current_total_main_axis_size: f32,
+        child_main_axis_size: f32,
+        num_children: usize,
+        index: u32,
+    ) -> f32 {
+        let (_, main_max) = self.main_axis_constraint(constraints);
+        match self.main_axis_alignment {
+            MainAxisAlignment::Start => current_total_main_axis_size,
+            MainAxisAlignment::End => {
+                main_max - total_main_axis_size + current_total_main_axis_size
+            }
+            MainAxisAlignment::Center => (main_max * 0.5) - (child_main_axis_size * 0.5),
+            MainAxisAlignment::SpaceEvenly => {
+                let spacing = (main_max - total_main_axis_size) / (num_children as f32 + 1.0);
+                current_total_main_axis_size + spacing
+            }
+            MainAxisAlignment::SpaceAround => {
+                let space = (main_max - total_main_axis_size) / num_children as f32;
+                if index == 0 || index == num_children as u32 {
+                    current_total_main_axis_size + (space / 2.0)
+                } else {
+                    current_total_main_axis_size + space
+                }
+            }
+            MainAxisAlignment::SpaceBetween => {
+                if num_children == 1 {
+                    (main_max * 0.5) - (child_main_axis_size * 0.5)
+                } else if index == 0 {
+                    0.0
+                } else {
+                    let spacing = (main_max - total_main_axis_size) / (num_children as f32 - 1.0);
+                    current_total_main_axis_size + spacing
+                }
+            }
         }
     }
 
-    // Calculate the min and max constraints along the cross axis
-    fn cross_axis_constraint(&self, constraints: &BoxConstraints) -> Vector2 {
-        match self.axis {
-            Axis::Horizontal => Vector2::new(constraints.min.y, constraints.max.y),
-            Axis::Vertical => Vector2::new(constraints.min.x, constraints.max.x),
+    fn child_cross_axis_position(
+        &self,
+        constraints: &BoxConstraints,
+        child_cross_axis_size: f32,
+        total_cross_axis_size: f32,
+    ) -> f32 {
+        let (_, cross_max) = self.cross_axis_constraint(constraints);
+        match self.cross_axis_alignment {
+            CrossAxisAlignment::Start | CrossAxisAlignment::Stretch => 0.0,
+            CrossAxisAlignment::End => cross_max - child_cross_axis_size,
+            CrossAxisAlignment::Center => {
+                (total_cross_axis_size * 0.5) - (child_cross_axis_size * 0.5)
+            }
         }
     }
 
+    // Calculate the `BoxConstraints` for a fixed-size child.
+    fn inflexible_child_constraints(&self, parent_constraints: &BoxConstraints) -> BoxConstraints {
+        let (_, main_max) = self.main_axis_constraint(parent_constraints);
+        let (_, cross_max) = self.cross_axis_constraint(parent_constraints);
+        let main_axis_constraint = Vector2::new(0.0, main_max);
+        let cross_axis_constraint = match self.cross_axis_alignment {
+            CrossAxisAlignment::Stretch => Vector2::new(cross_max, cross_max),
+            _ => Vector2::new(0.0, cross_max),
+        };
+        self.align_constraints(main_axis_constraint, cross_axis_constraint)
+    }
+
+    // Calculate the `BoxConstraints` for a flexible child.
+    fn flex_child_constraints(
+        &self,
+        constraints: &BoxConstraints,
+        main_axis_size: f32,
+    ) -> BoxConstraints {
+        let (_, cross_max) = self.cross_axis_constraint(constraints);
+        let main_axis_constraint = Vector2::new(main_axis_size, main_axis_size);
+        let cross_axis_constraint = match self.cross_axis_alignment {
+            CrossAxisAlignment::Stretch => Vector2::new(cross_max, cross_max),
+            _ => Vector2::new(0.0, cross_max),
+        };
+        self.align_constraints(main_axis_constraint, cross_axis_constraint)
+    }
+
+    // Get the minimum and maximum size of a constraint along the main axis.
+    fn main_axis_constraint(&self, constraints: &BoxConstraints) -> (f32, f32) {
+        let BoxConstraints { min, max } = constraints;
+        match self.axis {
+            Axis::Horizontal => (min.x, max.x),
+            Axis::Vertical => (min.y, max.y),
+        }
+    }
+
+    // Get the minimum and maximum size of a constraint along the cross axis.
+    fn cross_axis_constraint(&self, constraints: &BoxConstraints) -> (f32, f32) {
+        let BoxConstraints { min, max } = constraints;
+        match self.axis {
+            Axis::Horizontal => (min.y, max.y),
+            Axis::Vertical => (min.x, max.x),
+        }
+    }
+
+    // Create a `BoxConstraints` that is aligned along the same axis as the
+    // `Flex` parent.
     fn align_constraints(
         &self,
-        main_axis_constraint: Vector2,
-        cross_axis_constraint: Vector2,
+        main_constraint: Vector2,
+        cross_constraint: Vector2,
     ) -> BoxConstraints {
-        let (main_min, main_max) = main_axis_constraint.into();
-        let (cross_min, cross_max) = cross_axis_constraint.into();
+        let (main_min, main_max) = main_constraint.into();
+        let (cross_min, cross_max) = cross_constraint.into();
         match self.axis {
             Axis::Horizontal => BoxConstraints {
                 min: (main_min, cross_min).into(),
@@ -265,110 +385,27 @@ impl FlexGroup {
         }
     }
 
-    // Calculate the [BoxConstraints] for a [Flex::Fixed] child.
-    fn fixed_child_constraints(&self, constraints: &BoxConstraints) -> BoxConstraints {
-        let (_, main_max) = self.main_axis_constraint(constraints).into();
-        let (_, cross_max) = self.cross_axis_constraint(constraints).into();
-        let cross_constraint = match self.cross_axis_alignment {
-            CrossAxisAlignment::Start | CrossAxisAlignment::End | CrossAxisAlignment::Center => {
-                Vector2::new(0.0, cross_max)
-            }
-            CrossAxisAlignment::Stretch => Vector2::new(cross_max, cross_max),
-        };
-        let main_constraint = Vector2::new(0.0, main_max);
-        self.align_constraints(main_constraint, cross_constraint)
-    }
-
-    // Calculate the [BoxConstraints] for a [Flex::Flexible] child.
-    fn flex_child_constraints(
-        &self,
-        constraints: &BoxConstraints,
-        flex_size: f32,
-    ) -> BoxConstraints {
-        let (_, cross_max) = self.cross_axis_constraint(constraints).into();
-        let cross_constraint = match self.cross_axis_alignment {
-            CrossAxisAlignment::Stretch => Vector2::new(cross_max, cross_max),
-            _ => Vector2::new(0.0, cross_max),
-        };
-        let main_constraint = Vector2::new(flex_size, flex_size);
-        self.align_constraints(main_constraint, cross_constraint)
-    }
-
-    #[allow(clippy::cast_precision_loss)]
-    fn child_main_axis_position(
-        &self,
-        constraints: &BoxConstraints,
-        // The total size of all elements along the main axis
-        total_main_axis_size: f32,
-        child_main_axis_size: f32,
-        // The number of elements in the FlexGroup
-        num_widgets: usize,
-        // The index of the current element in the FlexGroup
-        index: usize,
-        // The current cumulative size of all previously laid out elements along
-        // the main axis.
-        current_main_size: f32,
-    ) -> f32 {
-        let (_, main_max) = self.main_axis_constraint(constraints).into();
-        match self.main_axis_alignment {
-            MainAxisAlignment::Start => current_main_size,
-            MainAxisAlignment::End => main_max - total_main_axis_size + current_main_size,
-            MainAxisAlignment::Center => main_max * 0.5 - child_main_axis_size * 0.5,
-            MainAxisAlignment::SpaceEvenly => {
-                let space = (main_max - total_main_axis_size) / (num_widgets as f32 + 1.0);
-                current_main_size + space
-            }
-            MainAxisAlignment::SpaceAround => {
-                let space = (main_max - total_main_axis_size) / num_widgets as f32;
-                if index == 0 || index == num_widgets {
-                    current_main_size + (space / 2.0)
-                } else {
-                    current_main_size + space
-                }
-            }
-            MainAxisAlignment::SpaceBetween => {
-                if num_widgets == 1 {
-                    return main_max * 0.5 - child_main_axis_size * 0.5;
-                }
-                if index == 0 {
-                    0.0
-                } else {
-                    let space = (main_max - total_main_axis_size) / (num_widgets as f32 - 1.0);
-                    current_main_size + space
-                }
-            }
-        }
-    }
-
-    fn child_cross_axis_position(
-        &self,
-        constraints: &BoxConstraints,
-        // The size of the current element along the cross axis
-        cross_axis_size: f32,
-        // The size of all elements along the cross axis
-        max_cross_axis_size: f32,
-    ) -> f32 {
-        let (_, cross_max) = self.cross_axis_constraint(constraints).into();
-        match self.cross_axis_alignment {
-            CrossAxisAlignment::Start | CrossAxisAlignment::Stretch => 0.0,
-            CrossAxisAlignment::End => cross_max - cross_axis_size,
-            CrossAxisAlignment::Center => (max_cross_axis_size * 0.5) - (cross_axis_size * 0.5),
-        }
-    }
-
-    // Get the size of a child element along the main axis of the [FlexGroup]
-    fn child_main_axis_size(&self, sbox: &SizedLayoutBox) -> f32 {
+    // Get a 2D coordinate from positions relative to the main and cross axes.
+    fn align_to_axis(&self, main_pos: f32, cross_pos: f32) -> Vector2 {
         match self.axis {
-            Axis::Horizontal => sbox.size.x,
-            Axis::Vertical => sbox.size.y,
+            Axis::Horizontal => Vector2::new(main_pos, cross_pos),
+            Axis::Vertical => Vector2::new(cross_pos, main_pos),
         }
     }
 
-    // Get the size of a child element along the cross axis of the [FlexGroup]
-    fn child_cross_axis_size(&self, sbox: &SizedLayoutBox) -> f32 {
+    // Get the size along the main axis.
+    fn main_axis_size(&self, size: Vector2) -> f32 {
         match self.axis {
-            Axis::Horizontal => sbox.size.y,
-            Axis::Vertical => sbox.size.x,
+            Axis::Horizontal => size.x,
+            Axis::Vertical => size.y,
+        }
+    }
+
+    // Get the size along the cross axis.
+    fn cross_axis_size(&self, size: Vector2) -> f32 {
+        match self.axis {
+            Axis::Horizontal => size.y,
+            Axis::Vertical => size.x,
         }
     }
 }
@@ -377,14 +414,14 @@ impl FlexGroup {
 /// cases, this test module uses the following format:
 ///
 /// 1. Feature section header
-/// 2. `flex_group_vertical_{parameter name}_with_fixed_child`
-/// 3. `flex_group_horizontal_{parameter name}_with_fixed_child`
-/// 4. `flex_group_vertical_{parameter name}_with_three_fixed_children`
-/// 5. `flex_group_horizontal_{parameter name}_with_three_fixed_children`
-/// 6. `flex_group_vertical_{parameter name}_with_flex_child`
-/// 7. `flex_group_horizontal_{parameter name}_with_flex_child`
-/// 8. `flex_group_vertical_{parameter name}_with_three_flex_children`
-/// 9. `flex_group_horizontal_{parameter name}_with_three_flex_children`
+/// 2. `flex2_vertical_{parameter name}_with_fixed_child`
+/// 3. `flex2_horizontal_{parameter name}_with_fixed_child`
+/// 4. `flex2_vertical_{parameter name}_with_three_fixed_children`
+/// 5. `flex2_horizontal_{parameter name}_with_three_fixed_children`
+/// 6. `flex2_vertical_{parameter name}_with_flex_child`
+/// 7. `flex2_horizontal_{parameter name}_with_flex_child`
+/// 8. `flex2_vertical_{parameter name}_with_three_flex_children`
+/// 9. `flex2_horizontal_{parameter name}_with_three_flex_children`
 ///
 /// In other words, alternative between the following units under test:
 ///
@@ -404,31 +441,31 @@ mod tests {
     use test_util::assert_slice_eq;
 
     // --------------------------------------------------
-    // Flex child
+    // Flexible
     // --------------------------------------------------
 
     #[test]
     fn flex_with_zero_flex_is_treated_like_fixed_child() {
-        let column = FlexGroup {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Min,
             main_axis_alignment: MainAxisAlignment::Start,
             cross_axis_alignment: CrossAxisAlignment::Start,
             children: vec![
-                Flex::Flexible {
-                    flex: 0.0,
+                Box::new(Flexible {
+                    flex_factor: 0.0,
                     child: Box::new(widget::Rect {
                         size: (10.0, 10.0).into(),
                         color: Color::green(),
                     }),
-                },
-                Flex::Flexible {
-                    flex: 0.0,
+                }),
+                Box::new(Flexible {
+                    flex_factor: 0.0,
                     child: Box::new(widget::Rect {
                         size: (10.0, 10.0).into(),
                         color: Color::blue(),
                     }),
-                },
+                }),
             ],
         };
 
@@ -457,8 +494,8 @@ mod tests {
     // --------------------------------------------------
 
     #[test]
-    fn flex_group_vertical_main_axis_size_min_with_fixed_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_size_min_with_fixed_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Min,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -480,8 +517,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_size_min_with_fixed_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_size_min_with_fixed_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Min,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -503,16 +540,16 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_size_min_with_three_fixed_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_size_min_with_three_fixed_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Min,
             main_axis_alignment: MainAxisAlignment::Start,
             cross_axis_alignment: CrossAxisAlignment::Start,
             children: vec![
+                create_fixed_child(Color::red()),
                 create_fixed_child(Color::green()),
-                create_fixed_child(Color::green()),
-                create_fixed_child(Color::green()),
+                create_fixed_child(Color::blue()),
             ],
         };
 
@@ -521,7 +558,7 @@ mod tests {
         let expected_layout = vec![
             LayoutBox {
                 rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
-                ..fixed_child_lbox(Color::green())
+                ..fixed_child_lbox(Color::red())
             },
             LayoutBox {
                 rect: Rect::from_pos((0.0, 10.0), (10.0, 10.0)),
@@ -529,7 +566,7 @@ mod tests {
             },
             LayoutBox {
                 rect: Rect::from_pos((0.0, 20.0), (10.0, 10.0)),
-                ..fixed_child_lbox(Color::green())
+                ..fixed_child_lbox(Color::blue())
             },
             LayoutBox {
                 rect: Rect::from_size((10.0, 30.0)),
@@ -541,8 +578,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_size_min_with_three_fixed_children() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_size_min_with_three_fixed_children() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Min,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -579,8 +616,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_size_min_with_flex_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_size_min_with_flex_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Min,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -605,8 +642,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_size_min_with_flex_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_size_min_with_flex_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Min,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -631,8 +668,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_size_min_with_three_flex_child_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_size_min_with_three_flex_child_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Min,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -670,8 +707,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_size_min_with_three_flex_child_children() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_size_min_with_three_flex_child_children() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Min,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -709,8 +746,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_size_max_with_fixed_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_size_max_with_fixed_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -735,8 +772,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_size_max_with_fixed_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_size_max_with_fixed_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -761,8 +798,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_size_max_with_three_fixed_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_size_max_with_three_fixed_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -799,8 +836,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_size_max_with_three_fixed_children() {
-        let column = FlexGroup {
+    fn flex2_horizontal_main_axis_size_max_with_three_fixed_children() {
+        let column = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -837,8 +874,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_size_max_with_flex_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_size_max_with_flex_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -863,8 +900,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_size_max_with_flex_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_size_max_with_flex_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -889,8 +926,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_size_max_with_three_flex_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_size_max_with_three_flex_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -928,8 +965,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_size_max_with_three_flex_children() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_size_max_with_three_flex_children() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -971,8 +1008,8 @@ mod tests {
     // --------------------------------------------------
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_start_with_fixed_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_start_with_fixed_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -997,8 +1034,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_start_with_fixed_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_start_with_fixed_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -1023,8 +1060,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_start_with_three_fixed_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_start_with_three_fixed_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -1061,8 +1098,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_start_with_three_fixed_children() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_start_with_three_fixed_children() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -1099,8 +1136,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_start_with_flex_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_start_with_flex_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -1125,8 +1162,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_start_with_flex_child() {
-        let column = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_start_with_flex_child() {
+        let column = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -1151,8 +1188,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_start_with_three_flex_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_start_with_three_flex_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -1190,8 +1227,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_start_with_three_flex_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_start_with_three_flex_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -1229,8 +1266,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_end_with_fixed_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_end_with_fixed_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::End,
@@ -1255,8 +1292,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_end_with_fixed_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_end_with_fixed_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::End,
@@ -1281,31 +1318,16 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_end_with_three_fixed_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_end_with_three_fixed_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::End,
             cross_axis_alignment: CrossAxisAlignment::Start,
             children: vec![
-                Flex::Fixed {
-                    child: Box::new(widget::Rect {
-                        size: (10.0, 10.0).into(),
-                        color: Color::red(),
-                    }),
-                },
-                Flex::Fixed {
-                    child: Box::new(widget::Rect {
-                        size: (10.0, 10.0).into(),
-                        color: Color::green(),
-                    }),
-                },
-                Flex::Fixed {
-                    child: Box::new(widget::Rect {
-                        size: (10.0, 10.0).into(),
-                        color: Color::blue(),
-                    }),
-                },
+                create_fixed_child(Color::red()),
+                create_fixed_child(Color::green()),
+                create_fixed_child(Color::blue()),
             ],
         };
 
@@ -1315,7 +1337,7 @@ mod tests {
             LayoutBox {
                 rect: Rect::from_pos((0.0, 70.0), (10.0, 10.0)),
                 material: Material::Solid(Color::red()),
-                ..fixed_child_lbox(Color::green())
+                ..fixed_child_lbox(Color::red())
             },
             LayoutBox {
                 rect: Rect::from_pos((0.0, 80.0), (10.0, 10.0)),
@@ -1325,7 +1347,7 @@ mod tests {
             LayoutBox {
                 rect: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
                 material: Material::Solid(Color::blue()),
-                ..fixed_child_lbox(Color::green())
+                ..fixed_child_lbox(Color::blue())
             },
             LayoutBox {
                 rect: Rect::from_size((10.0, 100.0)),
@@ -1337,8 +1359,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_end_with_flex_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_end_with_flex_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::End,
@@ -1363,8 +1385,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_end_with_flex_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_end_with_flex_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::End,
@@ -1389,8 +1411,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_center_with_fixed_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_center_with_fixed_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Center,
@@ -1415,8 +1437,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_center_with_fixed_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_center_with_fixed_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Center,
@@ -1441,8 +1463,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_center_with_flex_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_center_with_flex_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Center,
@@ -1467,8 +1489,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_center_with_flex_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_center_with_flex_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Center,
@@ -1493,8 +1515,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_space_between_with_fixed_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_space_between_with_fixed_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceBetween,
@@ -1519,8 +1541,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_space_between_with_fixed_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_space_between_with_fixed_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceBetween,
@@ -1545,8 +1567,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_space_between_with_three_fixed_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_space_between_with_three_fixed_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceBetween,
@@ -1583,8 +1605,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_space_between_with_three_fixed_children() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_space_between_with_three_fixed_children() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceBetween,
@@ -1621,8 +1643,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_space_between_with_flex_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_space_between_with_flex_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceBetween,
@@ -1647,8 +1669,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_space_between_with_flex_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_space_between_with_flex_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceBetween,
@@ -1673,8 +1695,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_space_between_with_three_flex_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_space_between_with_three_flex_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceBetween,
@@ -1712,8 +1734,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_space_between_with_three_flex_children() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_space_between_with_three_flex_children() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceBetween,
@@ -1751,8 +1773,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_space_around_with_fixed_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_space_around_with_fixed_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceAround,
@@ -1777,8 +1799,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_space_around_with_fixed_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_space_around_with_fixed_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceAround,
@@ -1803,8 +1825,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_space_around_with_three_fixed_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_space_around_with_three_fixed_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceAround,
@@ -1842,8 +1864,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_space_around_with_three_fixed_children() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_space_around_with_three_fixed_children() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceAround,
@@ -1881,8 +1903,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_space_around_with_flex_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_space_around_with_flex_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceAround,
@@ -1907,8 +1929,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_space_around_with_flex_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_space_around_with_flex_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceAround,
@@ -1933,8 +1955,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_space_around_with_three_flex_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_space_around_with_three_flex_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceAround,
@@ -1972,8 +1994,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_space_around_with_three_flex_children() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_space_around_with_three_flex_children() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceAround,
@@ -2011,8 +2033,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_space_evenly_with_fixed_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_space_evenly_with_fixed_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceEvenly,
@@ -2037,8 +2059,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_space_evenly_with_fixed_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_space_evenly_with_fixed_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceEvenly,
@@ -2063,8 +2085,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_space_evenly_with_three_fixed_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_space_evenly_with_three_fixed_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceEvenly,
@@ -2102,8 +2124,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_space_evenly_with_three_fixed_children() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_space_evenly_with_three_fixed_children() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceEvenly,
@@ -2141,8 +2163,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_main_axis_alignment_space_evenly_with_flex_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_main_axis_alignment_space_evenly_with_flex_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceEvenly,
@@ -2167,8 +2189,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_main_axis_alignment_space_evenly_with_flex_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_main_axis_alignment_space_evenly_with_flex_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::SpaceEvenly,
@@ -2197,8 +2219,8 @@ mod tests {
     // --------------------------------------------------
 
     #[test]
-    fn flex_group_vertical_cross_axis_alignment_start_with_fixed_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_cross_axis_alignment_start_with_fixed_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2223,8 +2245,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_cross_axis_alignment_start_with_fixed_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_cross_axis_alignment_start_with_fixed_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2249,8 +2271,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_cross_axis_alignment_start_with_three_fixed_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_cross_axis_alignment_start_with_three_fixed_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2287,8 +2309,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_cross_axis_alignment_start_with_three_fixed_children() {
-        let row = FlexGroup {
+    fn flex2_horizontal_cross_axis_alignment_start_with_three_fixed_children() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2325,8 +2347,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_cross_axis_alignment_start_with_flex_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_cross_axis_alignment_start_with_flex_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2351,8 +2373,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_cross_axis_alignment_start_with_flex_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_cross_axis_alignment_start_with_flex_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2377,8 +2399,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_cross_axis_alignment_start_with_three_flex_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_cross_axis_alignment_start_with_three_flex_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2416,8 +2438,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_cross_axis_alignment_start_with_three_flex_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_cross_axis_alignment_start_with_three_flex_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2455,8 +2477,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_cross_axis_alignment_end_with_fixed_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_cross_axis_alignment_end_with_fixed_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2481,8 +2503,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_cross_axis_alignment_end_with_fixed_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_cross_axis_alignment_end_with_fixed_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2507,8 +2529,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_cross_axis_alignment_end_with_three_fixed_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_cross_axis_alignment_end_with_three_fixed_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2545,8 +2567,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_cross_axis_alignment_end_with_three_fixed_children() {
-        let row = FlexGroup {
+    fn flex2_horizontal_cross_axis_alignment_end_with_three_fixed_children() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2583,8 +2605,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_cross_axis_alignment_end_with_flex_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_cross_axis_alignment_end_with_flex_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2609,8 +2631,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_cross_axis_alignment_end_with_flex_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_cross_axis_alignment_end_with_flex_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2635,8 +2657,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_cross_axis_alignment_end_with_three_flex_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_cross_axis_alignment_end_with_three_flex_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2674,8 +2696,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_cross_axis_alignment_end_with_three_flex_children() {
-        let row = FlexGroup {
+    fn flex2_horizontal_cross_axis_alignment_end_with_three_flex_children() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2713,8 +2735,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_cross_axis_alignment_stretch_with_fixed_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_cross_axis_alignment_stretch_with_fixed_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2739,8 +2761,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_cross_axis_alignment_stretch_with_fixed_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_cross_axis_alignment_stretch_with_fixed_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2765,8 +2787,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_cross_axis_alignment_stretch_with_three_fixed_children() {
-        let column = FlexGroup {
+    fn flex2_vertical_cross_axis_alignment_stretch_with_three_fixed_children() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2803,8 +2825,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_cross_axis_alignment_stretch_with_three_fixed_children() {
-        let row = FlexGroup {
+    fn flex2_horizontal_cross_axis_alignment_stretch_with_three_fixed_children() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2841,8 +2863,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_cross_axis_alignment_stretch_with_flex_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_cross_axis_alignment_stretch_with_flex_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2867,8 +2889,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_cross_axis_alignment_stretch_with_flex_child() {
-        let row = FlexGroup {
+    fn flex2_horizontal_cross_axis_alignment_stretch_with_flex_child() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2893,8 +2915,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_vertical_cross_axis_alignment_stretch_with_three_flex_child() {
-        let column = FlexGroup {
+    fn flex2_vertical_cross_axis_alignment_stretch_with_three_flex_child() {
+        let column = Flex {
             axis: Axis::Vertical,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2932,8 +2954,8 @@ mod tests {
     }
 
     #[test]
-    fn flex_group_horizontal_cross_axis_alignment_stretch_with_three_flex_children() {
-        let row = FlexGroup {
+    fn flex2_horizontal_cross_axis_alignment_stretch_with_three_flex_children() {
+        let row = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
@@ -2985,13 +3007,11 @@ mod tests {
         tree.boxes
     }
 
-    fn create_fixed_child(color: Color) -> Flex {
-        Flex::Fixed {
-            child: Box::new(widget::Rect {
-                size: (10.0, 10.0).into(),
-                color,
-            }),
-        }
+    fn create_fixed_child(color: Color) -> Box<widget::Rect> {
+        Box::new(widget::Rect {
+            size: (10.0, 10.0).into(),
+            color,
+        })
     }
 
     fn fixed_child_lbox(color: Color) -> LayoutBox {
@@ -3002,14 +3022,14 @@ mod tests {
         }
     }
 
-    fn create_flex_child(color: Color) -> Flex {
-        Flex::Flexible {
-            flex: 1.0,
+    fn create_flex_child(color: Color) -> Box<Flexible> {
+        Box::new(Flexible {
+            flex_factor: 1.0,
             child: Box::new(widget::Rect {
                 size: (10.0, 10.0).into(),
                 color,
             }),
-        }
+        })
     }
 
     fn flex_child_lbox(color: Color) -> LayoutBox {

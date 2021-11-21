@@ -1,7 +1,7 @@
 use super::Material;
 use math::{Rect, Vector2};
 use std::collections::VecDeque;
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 
 /// This is the essential trait of the box model. It is implemented by all
 /// components that undergo the box layout process.
