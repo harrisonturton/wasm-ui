@@ -14,7 +14,7 @@ pub fn assert_slice_eq<T: PartialEq + Debug>(expected: &[T], actual: &[T]) {
         let actual = &actual[i];
         assert!(
             *expected == *actual,
-            "\nVectors do not match. Unexpected item at index {}.\nExpected {:?}\nActual: {:?}",
+            "\nVectors do not match. Unexpected item at index {}.\nExpected: {:?}\nActual:   {:?}",
             i,
             expected,
             actual,

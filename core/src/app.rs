@@ -1,5 +1,5 @@
 use layout::{
-    Axis, Center, Color, Container, CrossAxisAlignment, EdgeInsets, Flex, FlexGroup, Layout,
+    Axis, Center, Color, Container, CrossAxisAlignment, EdgeInsets, Flex, Flexible, Layout,
     MainAxisAlignment, MainAxisSize, Positioned, Stack,
 };
 use math::Vector2;
@@ -10,7 +10,7 @@ pub struct App {
 }
 
 impl AppDriver for App {
-    fn tick(&mut self, time: f32) -> Box<dyn Layout> {
+    fn tick(&mut self, _: f32) -> Box<dyn Layout> {
         self.sidebar()
     }
 }
@@ -22,142 +22,48 @@ impl App {
     }
 
     pub fn sidebar(&self) -> Box<dyn Layout> {
-        let widgets = FlexGroup {
+        let widgets = Flex {
             axis: Axis::Horizontal,
             main_axis_size: MainAxisSize::Max,
             main_axis_alignment: MainAxisAlignment::Start,
             cross_axis_alignment: CrossAxisAlignment::Stretch,
             children: vec![
-                Flex::Fixed {
-                    child: Box::new(Container {
-                        size: (200.0, f32::INFINITY).into(),
-                        color: Color::black().alpha(0.25),
-                        padding: EdgeInsets::all(10.0),
-                        child: Some(Box::new(FlexGroup {
-                            axis: Axis::Vertical,
-                            main_axis_size: MainAxisSize::Max,
-                            main_axis_alignment: MainAxisAlignment::Start,
-                            cross_axis_alignment: CrossAxisAlignment::Stretch,
-                            children: vec![
-                                Flex::Fixed {
-                                    child: Box::new(Container {
-                                        size: (f32::INFINITY, 25.0).into(),
-                                        margin: EdgeInsets::bottom(15.0),
-                                        color: Color::red(),
-                                        ..Default::default()
-                                    }),
-                                },
-                                Flex::Fixed {
-                                    child: Box::new(Container {
-                                        size: (f32::INFINITY, 25.0).into(),
-                                        margin: EdgeInsets::bottom(15.0),
-                                        color: Color::red(),
-                                        ..Default::default()
-                                    }),
-                                },
-                            ],
-                        })),
-                        ..Default::default()
-                    }),
-                },
-                Flex::Flexible {
-                    flex: 1.0,
-                    child: Box::new(Container {
-                        color: Color::blue().alpha(0.05),
-                        ..Default::default()
-                    }),
-                },
-            ],
-        };
-        Box::new(widgets)
-    }
-
-    pub fn test(&self) -> Box<dyn Layout> {
-        use layout::{Axis, FlexGroup};
-        Box::new(FlexGroup {
-            axis: Axis::Horizontal,
-            main_axis_size: MainAxisSize::Max,
-            main_axis_alignment: MainAxisAlignment::Start,
-            cross_axis_alignment: CrossAxisAlignment::Start,
-            children: vec![Flex::Flexible {
-                flex: 1.0,
-                child: Box::new(layout::Container {
-                    // A Container with a fixed, non-infinity size along the
-                    // main axis of a Flex::Flesible
-                    size: (200.0, f32::INFINITY).into(),
-                    color: Color::black().alpha(0.25),
+                Box::new(Container {
+                    size: (50.0, f32::INFINITY).into(),
+                    color: Color::green(),
                     padding: EdgeInsets::all(10.0),
-                    child: Some(Box::new(FlexGroup {
+                    child: Some(Box::new(Flex {
                         axis: Axis::Vertical,
                         main_axis_size: MainAxisSize::Max,
                         main_axis_alignment: MainAxisAlignment::Start,
                         cross_axis_alignment: CrossAxisAlignment::Stretch,
                         children: vec![
-                            Flex::Fixed {
-                                child: Box::new(layout::Container {
-                                    size: (f32::INFINITY, 25.0).into(),
-                                    margin: EdgeInsets::bottom(10.0),
-                                    color: Color::red(),
-                                    ..Default::default()
-                                }),
-                            },
-                            Flex::Fixed {
-                                child: Box::new(layout::Container {
-                                    size: (f32::INFINITY, 25.0).into(),
-                                    margin: EdgeInsets::bottom(10.0),
-                                    color: Color::red(),
-                                    ..Default::default()
-                                }),
-                            },
+                            Box::new(Container {
+                                size: (f32::INFINITY, 25.0).into(),
+                                margin: EdgeInsets::bottom(15.0),
+                                color: Color::red(),
+                                ..Default::default()
+                            }),
+                            Box::new(Container {
+                                size: (f32::INFINITY, 25.0).into(),
+                                margin: EdgeInsets::bottom(15.0),
+                                color: Color::red(),
+                                ..Default::default()
+                            }),
                         ],
                     })),
                     ..Default::default()
                 }),
-            }],
-        })
-    }
-
-    #[allow(dead_code)]
-    pub fn render_flex_group(&self) -> Box<dyn Layout> {
-        use layout::{Axis, FlexGroup};
-        Box::new(Container {
-            size: (f32::INFINITY, f32::INFINITY).into(),
-            color: Color::yellow(),
-            padding: EdgeInsets::all(10.0),
-            child: Some(Box::new(FlexGroup {
-                axis: Axis::Vertical, // Is this a bug? Or just overflow? How can we calculate when overlfow happens?
-                main_axis_size: MainAxisSize::Min,
-                main_axis_alignment: MainAxisAlignment::Start,
-                cross_axis_alignment: CrossAxisAlignment::Start,
-                children: vec![
-                    Flex::Fixed {
-                        child: Box::new(FlexGroup {
-                            axis: Axis::Horizontal,
-                            main_axis_size: MainAxisSize::Min,
-                            main_axis_alignment: MainAxisAlignment::SpaceEvenly,
-                            cross_axis_alignment: CrossAxisAlignment::Start,
-                            children: vec![Flex::Fixed {
-                                child: Box::new(Container {
-                                    margin: EdgeInsets::bottom(10.0),
-                                    size: (15.0, 25.0).into(),
-                                    color: Color::red(),
-                                    ..Default::default()
-                                }),
-                            }],
-                            ..Default::default()
-                        }),
-                    },
-                    Flex::Fixed {
-                        child: Box::new(Container {
-                            size: (200.0, 300.0).into(),
-                            color: Color::green(),
-                            ..Default::default()
-                        }),
-                    },
-                ],
-            })),
-            ..Default::default()
-        })
+                Box::new(Flexible {
+                    flex_factor: 1.0,
+                    child: Box::new(Container {
+                        color: Color::blue(),
+                        ..Default::default()
+                    }),
+                }),
+            ],
+        };
+        Box::new(widgets)
     }
 
     // The green box should be positioned at (200, 200). If not, then we are not
