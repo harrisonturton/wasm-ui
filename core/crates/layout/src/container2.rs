@@ -144,7 +144,7 @@ impl Container {
         SizedLayoutBox {
             size,
             children: vec![id],
-            material: Material::Solid(self.color),
+            material: Some(Material::filled(self.color)),
             margin: self.margin,
         }
     }
@@ -158,7 +158,7 @@ impl Container {
         SizedLayoutBox {
             size,
             children: vec![],
-            material: Material::Solid(self.color),
+            material: Some(Material::filled(self.color)),
             margin: self.margin,
         }
     }
