@@ -56,48 +56,39 @@ pub fn canary_layouts_flex_sidebar() {
     let actual_layout = layout_with_constraints(&widgets, &constraints);
     let expected_layout = vec![
         LayoutBox {
-            rect: Rect::from_pos((0.0, 0.0), (30.0, 25.0)),
+            bounds: Rect::from_pos((0.0, 0.0), (30.0, 40.0)),
+            margin: EdgeInsets::bottom(15.0),
             children: vec![],
             material: Material::Solid(Color::red()),
         },
         LayoutBox {
-            rect: Rect::from_pos((0.0, 0.0), (30.0, 25.0)),
+            bounds: Rect::from_pos((0.0, 40.0), (30.0, 40.0)),
+            margin: EdgeInsets::bottom(15.0),
             children: vec![],
             material: Material::Solid(Color::red()),
         },
         LayoutBox {
-            rect: Rect::from_pos((0.0, 0.0), (30.0, 40.0)),
-            children: vec![0],
+            bounds: Rect::from_pos((10.0, 10.0), (30.0, 80.0)),
+            margin: EdgeInsets::zero(),
+            children: vec![0, 1],
             material: Material::None,
         },
         LayoutBox {
-            rect: Rect::from_pos((0.0, 40.0), (30.0, 40.0)),
-            children: vec![1],
-            material: Material::None,
+            bounds: Rect::from_pos((0.0, 0.0), (50.0, 100.0)),
+            margin: EdgeInsets::zero(),
+            children: vec![2],
+            material: Material::Solid(Color::green()),
         },
         LayoutBox {
-            rect: Rect::from_pos((10.0, 10.0), (30.0, 80.0)),
-            children: vec![2, 3],
-            material: Material::None,
-        },
-        LayoutBox {
-            rect: Rect::from_pos((0.0, 0.0), (50.0, 100.0)),
+            bounds: Rect::from_pos((50.0, 0.0), (50.0, 100.0)),
+            margin: EdgeInsets::zero(),
             children: vec![],
             material: Material::Solid(Color::blue()),
         },
         LayoutBox {
-            rect: Rect::from_pos((0.0, 0.0), (50.0, 100.0)),
-            children: vec![4],
-            material: Material::Solid(Color::green()),
-        },
-        LayoutBox {
-            rect: Rect::from_pos((50.0, 0.0), (50.0, 100.0)),
-            children: vec![5],
-            material: Material::None,
-        },
-        LayoutBox {
-            rect: Rect::from_pos((0.0, 0.0), (100.0, 100.0)),
-            children: vec![6, 7],
+            bounds: Rect::from_pos((0.0, 0.0), (100.0, 100.0)),
+            margin: EdgeInsets::zero(),
+            children: vec![3, 4],
             material: Material::None,
         },
     ];
