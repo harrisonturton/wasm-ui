@@ -1,6 +1,6 @@
 use layout::{
-    Axis, Color, Container, CrossAxisAlignment, EdgeInsets, Flex, Flexible, Layout,
-    MainAxisAlignment, MainAxisSize, Positioned, Stack, Borders
+    Axis, Borders, Color, Container, CrossAxisAlignment, EdgeInsets, Flex, Flexible, Layout,
+    MainAxisAlignment, MainAxisSize, Positioned, Stack,
 };
 use math::Vector2;
 use platform::AppDriver;
@@ -112,7 +112,7 @@ impl App {
                                     color: Color::rgba(45.0, 45.0, 45.0, 255.0),
                                     ..Default::default()
                                 }),
-                            })
+                            }),
                         ],
                     })),
                     ..Default::default()

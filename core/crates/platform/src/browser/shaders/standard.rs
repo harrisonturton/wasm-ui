@@ -1,10 +1,10 @@
 use anyhow::Error;
-use math::{Vector2, Vector3, Vector4, Rect};
+use math::{Rect, Vector2, Vector3, Vector4};
 use web_sys::WebGlProgram;
 
 use super::WebGl;
+use layout::{BorderSide, Borders, Color, Material};
 use std::rc::Rc;
-use layout::{Borders, BorderSide, Color, Material};
 
 const VERTEX_SHADER: &str = r#"
 // Position of the vertex
@@ -155,8 +155,13 @@ impl StandardShader {
             Some(border) => border,
             None => BorderSide::new(Color::transparent(), 0.0),
         };
-        self.gl.set_uniform_f32(&self.program, &format!("u_borders[{:?}].width", i), width)?;
-        self.gl.set_uniform_vec4(&self.program, &format!("u_borders[{:?}].color", i), color.to_linear())?;
+        self.gl
+            .set_uniform_f32(&self.program, &format!("u_borders[{:?}].width", i), width)?;
+        self.gl.set_uniform_vec4(
+            &self.program,
+            &format!("u_borders[{:?}].color", i),
+            color.to_linear(),
+        )?;
         Ok(())
     }
 }

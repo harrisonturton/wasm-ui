@@ -47,9 +47,15 @@ impl Layout for Container {
                 };
                 let sbox = child.layout(tree, &child_constraints);
                 let child_size = sbox.size;
-                let lbox = LayoutBox::from_child(sbox, self.padding.min() + self.margin.min() + self.borders.min());
+                let lbox = LayoutBox::from_child(
+                    sbox,
+                    self.padding.min() + self.margin.min() + self.borders.min(),
+                );
                 let child_id = tree.insert(lbox);
-                let child_size = Vector2::new(child_size.x + self.borders.total_width(), child_size.y + self.borders.total_height());
+                let child_size = Vector2::new(
+                    child_size.x + self.borders.total_width(),
+                    child_size.y + self.borders.total_height(),
+                );
                 SizedLayoutBox {
                     size: self.size.clamp_between(child_size, constraints.max),
                     children: vec![child_id],
@@ -67,7 +73,10 @@ impl Layout for Container {
                     (self.size.x + margin_horizontal).clamp(constraints.min.x, constraints.max.x);
                 let size_y =
                     (self.size.y + margin_vertical).clamp(constraints.min.y, constraints.max.y);
-                let child_size = Vector2::new(size_x + self.borders.total_width(), size_y + self.borders.total_height());
+                let child_size = Vector2::new(
+                    size_x + self.borders.total_width(),
+                    size_y + self.borders.total_height(),
+                );
                 SizedLayoutBox {
                     size: child_size,
                     children: vec![],
