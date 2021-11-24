@@ -115,6 +115,21 @@ impl WebGl {
         })
     }
 
+    pub fn set_uniform_f32(
+        &self,
+        program: &WebGlProgram,
+        field: &str,
+        value: f32,
+    ) -> Result<(), Error> {
+        self.gl.use_program(Some(program));
+        let location = self
+            .gl
+            .get_uniform_location(program, field)
+            .ok_or_else(|| anyhow::anyhow!("could not get location for uniform float {}", field))?;
+        self.gl.uniform1f(Some(&location), value);
+        Ok(())
+    }
+
     pub fn set_uniform_vec2(
         &self,
         program: &WebGlProgram,

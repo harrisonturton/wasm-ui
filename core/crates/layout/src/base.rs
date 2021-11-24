@@ -1,6 +1,6 @@
 use math::Vector2;
 
-#[derive(Debug, Default)]
+#[derive(PartialEq, Copy, Clone, Default, Debug)]
 pub struct EdgeInsets {
     pub top: f32,
     pub bottom: f32,
@@ -82,6 +82,23 @@ impl EdgeInsets {
             left: 0.0,
             right: inset,
         }
+    }
+
+    #[must_use]
+    pub fn total_height(&self) -> f32 {
+        self.left + self.right
+    }
+
+    #[must_use]
+    pub fn total_width(&self) -> f32 {
+        self.top + self.bottom
+    }
+
+    #[must_use]
+    pub fn total(&self) -> Vector2 {
+        let x = self.left + self.right;
+        let y = self.top + self.bottom;
+        Vector2::new(x, y)
     }
 
     #[must_use]

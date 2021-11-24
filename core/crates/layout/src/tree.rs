@@ -1,7 +1,8 @@
-use super::Material;
+use crate::base::EdgeInsets;
+use crate::decoration::Material;
 use math::{Rect, Vector2};
 use std::collections::VecDeque;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 
 /// This is the essential trait of the box model. It is implemented by all
 /// components that undergo the box layout process.
@@ -32,11 +33,32 @@ pub struct BoxConstraints {
 }
 
 impl BoxConstraints {
+    #[must_use]
     pub fn from_max<I: Into<Vector2>>(max: I) -> BoxConstraints {
         BoxConstraints {
             min: Vector2::zero(),
             max: max.into(),
         }
+    }
+
+    #[must_use]
+    pub fn horizontal(&self) -> Vector2 {
+        Vector2::new(self.min.x, self.max.x)
+    }
+
+    #[must_use]
+    pub fn vertical(&self) -> Vector2 {
+        Vector2::new(self.min.y, self.max.y)
+    }
+
+    #[must_use]
+    pub fn has_unbounded_height(&self) -> bool {
+        self.max.y != f32::INFINITY
+    }
+
+    #[must_use]
+    pub fn has_unbounded_width(&self) -> bool {
+        self.max.x != f32::INFINITY
     }
 }
 
@@ -50,19 +72,21 @@ pub type LayoutBoxId = usize;
 
 /// An element that has calculated it's own size, but has not been positioned
 /// by it's parent yet. This is the intermediate step during layout.
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Default, Debug)]
 pub struct SizedLayoutBox {
+    pub margin: EdgeInsets,
     pub size: Vector2,
     pub children: Vec<LayoutBoxId>,
-    pub material: Material,
+    pub material: Option<Material>,
 }
 
 /// An element that has finished layout. It has been been sized and positioned.
 #[derive(PartialEq, Clone, Default, Debug)]
 pub struct LayoutBox {
-    pub rect: Rect,
+    pub bounds: Rect, // Includes margins
+    pub margin: EdgeInsets,
     pub children: Vec<LayoutBoxId>,
-    pub material: Material,
+    pub material: Option<Material>,
 }
 
 impl Eq for LayoutBox {}
@@ -77,7 +101,8 @@ impl LayoutBox {
         let min = pos.into();
         let max = min + child.size;
         LayoutBox {
-            rect: Rect::new(min, max),
+            bounds: Rect::new(min, max),
+            margin: child.margin,
             children: child.children,
             material: child.material,
         }
@@ -165,7 +190,7 @@ impl<'a> Iterator for LayoutTreeIterator<'a> {
         let parent_offset = self.offsets.pop_front()?;
         let parent = self.tree.get(parent_id)?;
         let child = self.tree.get(child_id)?;
-        let offset = child.rect.min + parent_offset;
+        let offset = child.bounds.min + parent_offset;
         for child in child.children.iter().rev() {
             self.parents.push_front(child_id);
             self.remaining.push_front(*child);
@@ -178,33 +203,37 @@ impl<'a> Iterator for LayoutTreeIterator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Color;
+    use crate::decoration::{Color, Material};
 
     #[test]
     fn layout_tree_iter_nested() {
         let mut tree = LayoutTree::new();
         let a = LayoutBox {
-            rect: Rect::new((0.0, 0.0).into(), (0.0, 0.0).into()),
+            bounds: Rect::new((0.0, 0.0).into(), (0.0, 0.0).into()),
             children: vec![],
-            material: Material::None,
+            material: None,
+            ..Default::default()
         };
         let a_id = tree.insert(a.clone());
         let b = LayoutBox {
-            rect: Rect::new((1.0, 1.0).into(), (1.0, 1.0).into()),
+            bounds: Rect::new((1.0, 1.0).into(), (1.0, 1.0).into()),
             children: vec![a_id],
-            material: Material::None,
+            material: None,
+            ..Default::default()
         };
         let b_id = tree.insert(b.clone());
         let c = LayoutBox {
-            rect: Rect::new((2.0, 2.0).into(), (2.0, 2.0).into()),
+            bounds: Rect::new((2.0, 2.0).into(), (2.0, 2.0).into()),
             children: vec![b_id],
-            material: Material::None,
+            material: None,
+            ..Default::default()
         };
         let c_id = tree.insert(c.clone());
         let root = LayoutBox {
-            rect: Rect::new((3.0, 3.0).into(), (3.0, 3.0).into()),
+            bounds: Rect::new((3.0, 3.0).into(), (3.0, 3.0).into()),
             children: vec![c_id],
-            material: Material::None,
+            material: None,
+            ..Default::default()
         };
         let root_id = tree.insert(root.clone());
         tree.set_root(Some(root_id));
@@ -229,34 +258,39 @@ mod tests {
     fn layout_tree_iter_works() {
         let mut tree = LayoutTree::new();
         let a_child = LayoutBox {
-            rect: Rect::new((4.0, 4.0).into(), (2.0, 2.0).into()),
+            bounds: Rect::new((4.0, 4.0).into(), (2.0, 2.0).into()),
             children: vec![],
-            material: Material::None,
+            material: None,
+            ..Default::default()
         };
         let a_child_id = tree.insert(a_child.clone());
         let a = LayoutBox {
-            rect: Rect::new((1.0, 1.0).into(), (2.0, 2.0).into()),
+            bounds: Rect::new((1.0, 1.0).into(), (2.0, 2.0).into()),
             children: vec![a_child_id],
-            material: Material::None,
+            material: None,
+            ..Default::default()
         };
         let a_id = tree.insert(a.clone());
 
         let b_child = LayoutBox {
-            rect: Rect::new((5.0, 5.0).into(), (2.0, 2.0).into()),
+            bounds: Rect::new((5.0, 5.0).into(), (2.0, 2.0).into()),
             children: vec![],
-            material: Material::None,
+            material: None,
+            ..Default::default()
         };
         let b_child_id = tree.insert(b_child.clone());
         let b = LayoutBox {
-            rect: Rect::new((2.0, 2.0).into(), (2.0, 2.0).into()),
+            bounds: Rect::new((2.0, 2.0).into(), (2.0, 2.0).into()),
             children: vec![b_child_id],
-            material: Material::None,
+            material: None,
+            ..Default::default()
         };
         let b_id = tree.insert(b.clone());
         let c = LayoutBox {
-            rect: Rect::new((3.0, 3.0).into(), (3.0, 3.0).into()),
+            bounds: Rect::new((3.0, 3.0).into(), (3.0, 3.0).into()),
             children: vec![a_id, b_id],
-            material: Material::None,
+            material: None,
+            ..Default::default()
         };
         let c_id = tree.insert(c.clone());
         tree.set_root(Some(c_id));
@@ -281,11 +315,11 @@ mod tests {
     #[test]
     fn lbox_partial_eq_with_different_materials_returns_false() {
         let lbox_a = LayoutBox {
-            material: Material::Solid(Color::red()),
+            material: Some(Material::filled(Color::red())),
             ..a_layout_box()
         };
         let lbox_b = LayoutBox {
-            material: Material::Solid(Color::green()),
+            material: Some(Material::filled(Color::green())),
             ..a_layout_box()
         };
         assert_ne!(lbox_a, lbox_b);
@@ -293,9 +327,10 @@ mod tests {
 
     fn a_layout_box() -> LayoutBox {
         LayoutBox {
-            rect: Rect::from_size((10.0, 10.0)),
+            bounds: Rect::from_size((10.0, 10.0)),
             children: vec![],
-            material: Material::Solid(Color::transparent()),
+            material: Some(Material::filled(Color::transparent())),
+            ..Default::default()
         }
     }
 }

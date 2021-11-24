@@ -3,7 +3,7 @@ use math::Vector2;
 use std::collections::VecDeque;
 use std::fmt::Debug;
 
-// What direction the flex container should face.
+// What diboundsion the flex container should face.
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum Axis {
     // Place items in a row. The main axis is the `x` axis, and the cross axis
@@ -76,7 +76,7 @@ impl Default for MainAxisSize {
 }
 
 // This trait enables a child to provide it's flex factor to the parent widget
-// so the parent can calculate the correct `BoxConstraint`. If the flex factor
+// so the parent can calculate the corbounds `BoxConstraint`. If the flex factor
 // is `None`, then it is not a flexible widget.
 //
 // This is implemented as a trait so that it can be impl'd as a metatrait on
@@ -106,7 +106,7 @@ where
 }
 
 // `Flexible` is used to provide the flex factor to the flex container in order for
-// it to calculate the correct `BoxConstraints` for the flexible child.
+// it to calculate the corbounds `BoxConstraints` for the flexible child.
 #[derive(Debug)]
 pub struct Flexible {
     pub flex_factor: f32,
@@ -255,7 +255,8 @@ impl Layout for Flex {
         SizedLayoutBox {
             size,
             children,
-            material: Material::None,
+            material: None,
+            ..SizedLayoutBox::default()
         }
     }
 }
@@ -425,7 +426,7 @@ impl Flex {
 ///
 /// In other words, alternative between the following units under test:
 ///
-/// 1. Main axis direction (vertical or horizontal)
+/// 1. Main axis diboundsion (vertical or horizontal)
 /// 2. Child count (one or multiple, make sure to check order)
 /// 3. Fixed or flexible children
 ///
@@ -436,7 +437,8 @@ impl Flex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{widget, Color};
+    use crate::container;
+    use crate::decoration::Color;
     use math::{Rect, Vector2};
     use test_util::assert_slice_eq;
 
@@ -454,14 +456,14 @@ mod tests {
             children: vec![
                 Box::new(Flexible {
                     flex_factor: 0.0,
-                    child: Box::new(widget::Rect {
+                    child: Box::new(container::Rect {
                         size: (10.0, 10.0).into(),
                         color: Color::green(),
                     }),
                 }),
                 Box::new(Flexible {
                     flex_factor: 0.0,
-                    child: Box::new(widget::Rect {
+                    child: Box::new(container::Rect {
                         size: (10.0, 10.0).into(),
                         color: Color::blue(),
                     }),
@@ -473,17 +475,18 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
                 ..flex_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 10.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 10.0), (10.0, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 20.0)),
+                bounds: Rect::from_size((10.0, 20.0)),
                 children: vec![0, 1],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -508,9 +511,10 @@ mod tests {
         let expected_layout = vec![
             fixed_child_lbox(Color::green()),
             LayoutBox {
-                rect: Rect::from_size((10.0, 10.0)),
+                bounds: Rect::from_size((10.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -531,9 +535,10 @@ mod tests {
         let expected_layout = vec![
             fixed_child_lbox(Color::green()),
             LayoutBox {
-                rect: Rect::from_size((10.0, 10.0)),
+                bounds: Rect::from_size((10.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -557,21 +562,22 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::red())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 10.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 10.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 20.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 20.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 30.0)),
+                bounds: Rect::from_size((10.0, 30.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -595,21 +601,22 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((10.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((10.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((20.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((20.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((30.0, 10.0)),
+                bounds: Rect::from_size((30.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -629,13 +636,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -655,13 +663,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -686,21 +695,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, size)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, size), (10.0, size)),
+                bounds: Rect::from_pos((0.0, size), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
+                bounds: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -725,21 +735,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((size, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((size, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -759,13 +770,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_size((10.0, 10.0)),
+                bounds: Rect::from_size((10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -785,13 +797,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_size((10.0, 10.0)),
+                bounds: Rect::from_size((10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -815,21 +828,22 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 10.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 10.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 20.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 20.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -853,21 +867,22 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((10.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((10.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((20.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((20.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -887,13 +902,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -913,13 +929,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -944,21 +961,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, size)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, size), (10.0, size)),
+                bounds: Rect::from_pos((0.0, size), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
+                bounds: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -983,21 +1001,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((size, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((size, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1021,13 +1040,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_size((10.0, 10.0)),
+                bounds: Rect::from_size((10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1047,13 +1067,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_size((10.0, 10.0)),
+                bounds: Rect::from_size((10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1077,21 +1098,22 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 10.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 10.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 20.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 20.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1115,21 +1137,22 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((10.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((10.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((20.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((20.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1149,13 +1172,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1175,13 +1199,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1206,21 +1231,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, size)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, size), (10.0, size)),
+                bounds: Rect::from_pos((0.0, size), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
+                bounds: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1245,21 +1271,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((size, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((size, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1279,13 +1306,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1305,13 +1333,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((90.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((90.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1335,24 +1364,25 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 70.0), (10.0, 10.0)),
-                material: Material::Solid(Color::red()),
+                bounds: Rect::from_pos((0.0, 70.0), (10.0, 10.0)),
+                material: Some(Material::filled(Color::red())),
                 ..fixed_child_lbox(Color::red())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 80.0), (10.0, 10.0)),
-                material: Material::Solid(Color::green()),
+                bounds: Rect::from_pos((0.0, 80.0), (10.0, 10.0)),
+                material: Some(Material::filled(Color::green())),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
-                material: Material::Solid(Color::blue()),
+                bounds: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
+                material: Some(Material::filled(Color::blue())),
                 ..fixed_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1372,13 +1402,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1398,13 +1429,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1424,13 +1456,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1450,13 +1483,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1476,13 +1510,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1502,13 +1537,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1528,13 +1564,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1554,13 +1591,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1584,21 +1622,22 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1622,21 +1661,22 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((90.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((90.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1656,13 +1696,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1682,13 +1723,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1713,21 +1755,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, size)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, size), (10.0, size)),
+                bounds: Rect::from_pos((0.0, size), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
+                bounds: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1752,21 +1795,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((size, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((size, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1786,13 +1830,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1812,13 +1857,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1843,21 +1889,22 @@ mod tests {
         let spacing = (100.0 - 30.0) / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, spacing * 0.5), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, spacing * 0.5), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 10.0 + spacing * 1.5), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 10.0 + spacing * 1.5), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 20.0 + spacing * 2.5), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 20.0 + spacing * 2.5), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1882,21 +1929,22 @@ mod tests {
         let spacing = (100.0 - 30.0) / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((spacing * 0.5, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((spacing * 0.5, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((10.0 + spacing * 1.5, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((10.0 + spacing * 1.5, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((20.0 + spacing * 2.5, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((20.0 + spacing * 2.5, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1916,13 +1964,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1942,13 +1991,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -1973,21 +2023,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, size)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, size), (10.0, size)),
+                bounds: Rect::from_pos((0.0, size), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
+                bounds: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2012,21 +2063,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((size, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((size, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2046,13 +2098,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 45.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2072,13 +2125,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((45.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2103,21 +2157,22 @@ mod tests {
         let spacing = (100.0 - 30.0) / 4.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, spacing), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, spacing), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 10.0 + spacing * 2.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 10.0 + spacing * 2.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 20.0 + spacing * 3.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 20.0 + spacing * 3.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2142,21 +2197,22 @@ mod tests {
         let spacing = (100.0 - 30.0) / 4.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((spacing, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((spacing, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((10.0 + spacing * 2.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((10.0 + spacing * 2.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((20.0 + spacing * 3.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((20.0 + spacing * 3.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2176,13 +2232,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2202,13 +2259,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2232,13 +2290,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2258,13 +2317,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2288,21 +2348,22 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 10.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 10.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 20.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 20.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2326,21 +2387,22 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((10.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((10.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((20.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((20.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2360,13 +2422,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2386,13 +2449,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2417,21 +2481,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, size)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, size), (10.0, size)),
+                bounds: Rect::from_pos((0.0, size), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
+                bounds: Rect::from_pos((0.0, size * 2.0), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((10.0, 100.0)),
+                bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2456,21 +2521,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((size, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((size, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
+                bounds: Rect::from_pos((size * 2.0, 0.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 10.0)),
+                bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2490,13 +2556,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((90.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((90.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2516,13 +2583,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2546,21 +2614,22 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((90.0, 0.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((90.0, 0.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::red())
             },
             LayoutBox {
-                rect: Rect::from_pos((90.0, 10.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((90.0, 10.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((90.0, 20.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((90.0, 20.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2584,21 +2653,22 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::red())
             },
             LayoutBox {
-                rect: Rect::from_pos((10.0, 90.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((10.0, 90.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((20.0, 90.0), (10.0, 10.0)),
+                bounds: Rect::from_pos((20.0, 90.0), (10.0, 10.0)),
                 ..fixed_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2618,13 +2688,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((90.0, 0.0), (10.0, 100.0)),
+                bounds: Rect::from_pos((90.0, 0.0), (10.0, 100.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2644,13 +2715,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 90.0), (100.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 90.0), (100.0, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2675,21 +2747,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((90.0, 0.0), (10.0, size)),
+                bounds: Rect::from_pos((90.0, 0.0), (10.0, size)),
                 ..flex_child_lbox(Color::red())
             },
             LayoutBox {
-                rect: Rect::from_pos((90.0, size), (10.0, size)),
+                bounds: Rect::from_pos((90.0, size), (10.0, size)),
                 ..flex_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((90.0, size * 2.0), (10.0, size)),
+                bounds: Rect::from_pos((90.0, size * 2.0), (10.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2714,21 +2787,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 90.0), (size, 10.0)),
+                bounds: Rect::from_pos((0.0, 90.0), (size, 10.0)),
                 ..flex_child_lbox(Color::red())
             },
             LayoutBox {
-                rect: Rect::from_pos((size, 90.0), (size, 10.0)),
+                bounds: Rect::from_pos((size, 90.0), (size, 10.0)),
                 ..flex_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((size * 2.0, 90.0), (size, 10.0)),
+                bounds: Rect::from_pos((size * 2.0, 90.0), (size, 10.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2748,13 +2822,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2774,13 +2849,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2804,21 +2880,22 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (100.0, 10.0)),
                 ..fixed_child_lbox(Color::red())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 10.0), (100.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 10.0), (100.0, 10.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, 20.0), (100.0, 10.0)),
+                bounds: Rect::from_pos((0.0, 20.0), (100.0, 10.0)),
                 ..fixed_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2842,21 +2919,22 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (10.0, 100.0)),
                 ..fixed_child_lbox(Color::red())
             },
             LayoutBox {
-                rect: Rect::from_pos((10.0, 0.0), (10.0, 100.0)),
+                bounds: Rect::from_pos((10.0, 0.0), (10.0, 100.0)),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((20.0, 0.0), (10.0, 100.0)),
+                bounds: Rect::from_pos((20.0, 0.0), (10.0, 100.0)),
                 ..fixed_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2876,13 +2954,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&column, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (100.0, 100.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (100.0, 100.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2902,13 +2981,14 @@ mod tests {
         let actual_layout = layout_with_constraints(&row, &constraints);
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (100.0, 100.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (100.0, 100.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2933,21 +3013,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (100.0, size)),
+                bounds: Rect::from_pos((0.0, 0.0), (100.0, size)),
                 ..flex_child_lbox(Color::red())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, size), (100.0, size)),
+                bounds: Rect::from_pos((0.0, size), (100.0, size)),
                 ..flex_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((0.0, size * 2.0), (100.0, size)),
+                bounds: Rect::from_pos((0.0, size * 2.0), (100.0, size)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -2972,21 +3053,22 @@ mod tests {
         let size = 100.0 / 3.0;
         let expected_layout = vec![
             LayoutBox {
-                rect: Rect::from_pos((0.0, 0.0), (size, 100.0)),
+                bounds: Rect::from_pos((0.0, 0.0), (size, 100.0)),
                 ..flex_child_lbox(Color::red())
             },
             LayoutBox {
-                rect: Rect::from_pos((size, 0.0), (size, 100.0)),
+                bounds: Rect::from_pos((size, 0.0), (size, 100.0)),
                 ..flex_child_lbox(Color::green())
             },
             LayoutBox {
-                rect: Rect::from_pos((size * 2.0, 0.0), (size, 100.0)),
+                bounds: Rect::from_pos((size * 2.0, 0.0), (size, 100.0)),
                 ..flex_child_lbox(Color::blue())
             },
             LayoutBox {
-                rect: Rect::from_size((100.0, 100.0)),
+                bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
+                ..LayoutBox::default()
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -3007,8 +3089,8 @@ mod tests {
         tree.boxes
     }
 
-    fn create_fixed_child(color: Color) -> Box<widget::Rect> {
-        Box::new(widget::Rect {
+    fn create_fixed_child(color: Color) -> Box<container::Rect> {
+        Box::new(container::Rect {
             size: (10.0, 10.0).into(),
             color,
         })
@@ -3016,16 +3098,17 @@ mod tests {
 
     fn fixed_child_lbox(color: Color) -> LayoutBox {
         LayoutBox {
-            rect: Rect::from_size((10.0, 10.0)),
+            bounds: Rect::from_size((10.0, 10.0)),
             children: vec![],
-            material: Material::Solid(color),
+            material: Some(Material::filled(color)),
+            ..LayoutBox::default()
         }
     }
 
     fn create_flex_child(color: Color) -> Box<Flexible> {
         Box::new(Flexible {
             flex_factor: 1.0,
-            child: Box::new(widget::Rect {
+            child: Box::new(container::Rect {
                 size: (10.0, 10.0).into(),
                 color,
             }),
@@ -3034,9 +3117,10 @@ mod tests {
 
     fn flex_child_lbox(color: Color) -> LayoutBox {
         LayoutBox {
-            rect: Rect::from_size((10.0, 10.0)),
+            bounds: Rect::from_size((10.0, 10.0)),
             children: vec![],
-            material: Material::Solid(color),
+            material: Some(Material::filled(color)),
+            ..LayoutBox::default()
         }
     }
 }

@@ -1,6 +1,6 @@
 use layout::{
-    Axis, Center, Color, Container, CrossAxisAlignment, EdgeInsets, Flex, Flexible, Layout,
-    MainAxisAlignment, MainAxisSize, Positioned, Stack,
+    Axis, Color, Container, CrossAxisAlignment, EdgeInsets, Flex, Flexible, Layout,
+    MainAxisAlignment, MainAxisSize, Positioned, Stack, Borders
 };
 use math::Vector2;
 use platform::AppDriver;
@@ -21,6 +21,34 @@ impl App {
         App { position }
     }
 
+    #[allow(dead_code)]
+    pub fn simple(&self) -> Box<dyn Layout> {
+        use layout::container2::Container;
+        Box::new(Container {
+            color: Color::red(),
+            width: Some(100.0),
+            height: Some(100.0),
+            ..Default::default()
+        })
+    }
+
+    #[allow(dead_code)]
+    pub fn container(&self) -> Box<dyn Layout> {
+        use layout::container2::{Alignment, Container};
+        Box::new(Container {
+            color: Color::green(),
+            alignment: Alignment::center(),
+            child: Some(Box::new(layout::container2::Container {
+                width: Some(100.0),
+                height: Some(100.0),
+                color: Color::red(),
+                ..Default::default()
+            })),
+            ..Default::default()
+        })
+    }
+
+    #[allow(dead_code)]
     pub fn sidebar(&self) -> Box<dyn Layout> {
         let widgets = Flex {
             axis: Axis::Horizontal,
@@ -29,9 +57,9 @@ impl App {
             cross_axis_alignment: CrossAxisAlignment::Stretch,
             children: vec![
                 Box::new(Container {
-                    size: (50.0, f32::INFINITY).into(),
-                    color: Color::green(),
-                    padding: EdgeInsets::all(10.0),
+                    borders: Borders::right(Color::rgba(70.0, 70.0, 70.0, 255.0), 1.0),
+                    size: (200.0, f32::INFINITY).into(),
+                    color: Color::rgba(35.0, 35.0, 35.0, 255.0),
                     child: Some(Box::new(Flex {
                         axis: Axis::Vertical,
                         main_axis_size: MainAxisSize::Max,
@@ -40,14 +68,14 @@ impl App {
                         children: vec![
                             Box::new(Container {
                                 size: (f32::INFINITY, 25.0).into(),
-                                margin: EdgeInsets::bottom(15.0),
-                                color: Color::red(),
+                                margin: EdgeInsets::bottom(5.0),
+                                color: Color::rgba(40.0, 40.0, 40.0, 255.0),
                                 ..Default::default()
                             }),
                             Box::new(Container {
                                 size: (f32::INFINITY, 25.0).into(),
-                                margin: EdgeInsets::bottom(15.0),
-                                color: Color::red(),
+                                margin: EdgeInsets::bottom(5.0),
+                                color: Color::rgba(45.0, 45.0, 45.0, 255.0),
                                 ..Default::default()
                             }),
                         ],
@@ -57,9 +85,37 @@ impl App {
                 Box::new(Flexible {
                     flex_factor: 1.0,
                     child: Box::new(Container {
-                        color: Color::blue(),
+                        color: Color::rgba(22.0, 22.0, 22.0, 255.0),
                         ..Default::default()
                     }),
+                }),
+                Box::new(Container {
+                    size: (175.0, f32::INFINITY).into(),
+                    color: Color::rgba(35.0, 35.0, 35.0, 255.0),
+                    borders: Borders::left(Color::rgba(70.0, 70.0, 70.0, 255.0), 1.0),
+                    child: Some(Box::new(Flex {
+                        axis: Axis::Vertical,
+                        main_axis_size: MainAxisSize::Max,
+                        main_axis_alignment: MainAxisAlignment::Start,
+                        cross_axis_alignment: CrossAxisAlignment::Stretch,
+                        children: vec![
+                            Box::new(Container {
+                                size: (f32::INFINITY, 100.0).into(),
+                                color: Color::rgba(35.0, 35.0, 35.0, 255.0),
+                                margin: EdgeInsets::bottom(5.0),
+                                ..Default::default()
+                            }),
+                            Box::new(Flexible {
+                                flex_factor: 1.0,
+                                child: Box::new(Container {
+                                    size: (f32::INFINITY, 25.0).into(),
+                                    color: Color::rgba(45.0, 45.0, 45.0, 255.0),
+                                    ..Default::default()
+                                }),
+                            })
+                        ],
+                    })),
+                    ..Default::default()
                 }),
             ],
         };
