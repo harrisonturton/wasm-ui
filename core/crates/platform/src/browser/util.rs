@@ -58,13 +58,16 @@ pub fn try_create_shader_program(
     vertex_shader_src: &str,
     fragment_shader_src: &str,
 ) -> Result<WebGlProgram, Error> {
+    crate::browser::util::log("before try compile vertex shader");
     let vertex_shader =
         try_compile_shader(gl, WebGlRenderingContext::VERTEX_SHADER, vertex_shader_src)?;
+    crate::browser::util::log("after try compile vertex shader");
     let fragment_shader = try_compile_shader(
         gl,
         WebGlRenderingContext::FRAGMENT_SHADER,
         fragment_shader_src,
     )?;
+    crate::browser::util::log("after try compile frag shader");
     try_link_program(gl, &vertex_shader, &fragment_shader)
 }
 

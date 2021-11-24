@@ -1,15 +1,14 @@
 use anyhow::Error;
 use layout::BoxConstraints;
-use std::collections::VecDeque;
 use std::rc::Rc;
 use wasm_bindgen::prelude::wasm_bindgen;
 use web_sys::HtmlCanvasElement;
 
-use super::shaders::{MeshPainter, ShaderLibrary};
+use super::shaders::ShaderLibrary;
 use super::util::try_get_canvas;
 use super::WebGl;
 use crate::AppDriver;
-use layout::{Color, LayoutBox, LayoutTree};
+use layout::{Material, Color, LayoutBox, LayoutTree};
 use math::{Rect, Vector2, Vector3};
 
 #[wasm_bindgen]
@@ -94,29 +93,16 @@ impl BrowserDriver {
             let min = child.bounds.min + offset + child.margin.min();
             let max = child.bounds.max + offset - child.margin.max();
             let rect = Rect::new(min, max);
-            let color = match child.material {
-                layout::Material::Solid(color) => color,
-                layout::Material::None => continue,
-            };
-            self.draw_rect(rect, color)?;
+            self.draw_rect(rect, child.material)?;
         }
         Ok(())
     }
 
-    pub fn draw_rect(&mut self, rect: Rect, color: Color) -> Result<(), Error> {
-        let (min_x, min_y) = rect.min.into();
-        let (max_x, max_y) = rect.max.into();
-        let vertices: [Vector3; 6] = [
-            Vector3::new(min_x, min_y, 0.0),
-            Vector3::new(min_x, max_y, 0.0),
-            Vector3::new(max_x, min_y, 0.0),
-            Vector3::new(min_x, max_y, 0.0),
-            Vector3::new(max_x, min_y, 0.0),
-            Vector3::new(max_x, max_y, 0.0),
-        ];
-        self.shaders.standard.set_color(color.to_linear());
-        self.shaders.standard.paint_mesh(&vertices)?;
-        Ok(())
+    pub fn draw_rect(&mut self, rect: Rect, material: Option<Material>) -> Result<(), Error> {
+        match material {
+            Some(material) => self.shaders.standard.paint_rect(rect, material),
+            None => Ok(())
+        }
     }
 
     pub fn draw_line(&mut self, start: Vector2, end: Vector2, color: Color) -> Result<(), Error> {

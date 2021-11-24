@@ -77,7 +77,7 @@ pub struct SizedLayoutBox {
     pub margin: EdgeInsets,
     pub size: Vector2,
     pub children: Vec<LayoutBoxId>,
-    pub material: Material,
+    pub material: Option<Material>,
 }
 
 /// An element that has finished layout. It has been been sized and positioned.
@@ -86,7 +86,7 @@ pub struct LayoutBox {
     pub bounds: Rect, // Includes margins
     pub margin: EdgeInsets,
     pub children: Vec<LayoutBoxId>,
-    pub material: Material,
+    pub material: Option<Material>,
 }
 
 impl Eq for LayoutBox {}
@@ -211,28 +211,28 @@ mod tests {
         let a = LayoutBox {
             bounds: Rect::new((0.0, 0.0).into(), (0.0, 0.0).into()),
             children: vec![],
-            material: Material::None,
+            material: None,
             ..Default::default()
         };
         let a_id = tree.insert(a.clone());
         let b = LayoutBox {
             bounds: Rect::new((1.0, 1.0).into(), (1.0, 1.0).into()),
             children: vec![a_id],
-            material: Material::None,
+            material: None,
             ..Default::default()
         };
         let b_id = tree.insert(b.clone());
         let c = LayoutBox {
             bounds: Rect::new((2.0, 2.0).into(), (2.0, 2.0).into()),
             children: vec![b_id],
-            material: Material::None,
+            material: None,
             ..Default::default()
         };
         let c_id = tree.insert(c.clone());
         let root = LayoutBox {
             bounds: Rect::new((3.0, 3.0).into(), (3.0, 3.0).into()),
             children: vec![c_id],
-            material: Material::None,
+            material: None,
             ..Default::default()
         };
         let root_id = tree.insert(root.clone());
@@ -260,14 +260,14 @@ mod tests {
         let a_child = LayoutBox {
             bounds: Rect::new((4.0, 4.0).into(), (2.0, 2.0).into()),
             children: vec![],
-            material: Material::None,
+            material: None,
             ..Default::default()
         };
         let a_child_id = tree.insert(a_child.clone());
         let a = LayoutBox {
             bounds: Rect::new((1.0, 1.0).into(), (2.0, 2.0).into()),
             children: vec![a_child_id],
-            material: Material::None,
+            material: None,
             ..Default::default()
         };
         let a_id = tree.insert(a.clone());
@@ -275,21 +275,21 @@ mod tests {
         let b_child = LayoutBox {
             bounds: Rect::new((5.0, 5.0).into(), (2.0, 2.0).into()),
             children: vec![],
-            material: Material::None,
+            material: None,
             ..Default::default()
         };
         let b_child_id = tree.insert(b_child.clone());
         let b = LayoutBox {
             bounds: Rect::new((2.0, 2.0).into(), (2.0, 2.0).into()),
             children: vec![b_child_id],
-            material: Material::None,
+            material: None,
             ..Default::default()
         };
         let b_id = tree.insert(b.clone());
         let c = LayoutBox {
             bounds: Rect::new((3.0, 3.0).into(), (3.0, 3.0).into()),
             children: vec![a_id, b_id],
-            material: Material::None,
+            material: None,
             ..Default::default()
         };
         let c_id = tree.insert(c.clone());
@@ -315,11 +315,11 @@ mod tests {
     #[test]
     fn lbox_partial_eq_with_different_materials_returns_false() {
         let lbox_a = LayoutBox {
-            material: Material::Solid(Color::red()),
+            material: Some(Material::filled(Color::red())),
             ..a_layout_box()
         };
         let lbox_b = LayoutBox {
-            material: Material::Solid(Color::green()),
+            material: Some(Material::filled(Color::green())),
             ..a_layout_box()
         };
         assert_ne!(lbox_a, lbox_b);
@@ -329,7 +329,7 @@ mod tests {
         LayoutBox {
             bounds: Rect::from_size((10.0, 10.0)),
             children: vec![],
-            material: Material::Solid(Color::transparent()),
+            material: Some(Material::filled(Color::transparent())),
             ..Default::default()
         }
     }

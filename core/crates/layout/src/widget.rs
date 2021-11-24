@@ -21,7 +21,7 @@ impl Layout for Center {
         SizedLayoutBox {
             size: constraints.max,
             children: vec![id],
-            material: Material::None,
+            material: None,
             ..Default::default()
         }
     }
@@ -48,7 +48,7 @@ impl Layout for Stack {
         SizedLayoutBox {
             size: constraints.max,
             children,
-            material: Material::None,
+            material: None,
             ..Default::default()
         }
     }
@@ -76,7 +76,7 @@ impl Layout for Positioned {
         SizedLayoutBox {
             size: constraints.max,
             children: vec![child_id],
-            material: Material::Solid(Color::black().alpha(0.1)),
+            material: Some(Material::filled(Color::black().alpha(0.1))),
             ..Default::default()
         }
     }

@@ -1,5 +1,5 @@
 use crate::base::EdgeInsets;
-use crate::decoration::{Color, Material};
+use crate::decoration::{Borders, Color, Material};
 use crate::tree::{BoxConstraints, Layout, LayoutBox, LayoutTree, SizedLayoutBox};
 use math::Vector2;
 use std::fmt::Debug;
@@ -10,6 +10,7 @@ pub struct Container {
     pub margin: EdgeInsets,
     pub size: Vector2,
     pub color: Color,
+    pub borders: Borders,
     pub child: Option<Box<dyn Layout>>,
 }
 
@@ -20,6 +21,7 @@ impl Default for Container {
             margin: EdgeInsets::zero(),
             size: Vector2::new(f32::INFINITY, f32::INFINITY),
             color: Color::transparent(),
+            borders: Borders::none(),
             child: None,
         }
     }
@@ -45,12 +47,16 @@ impl Layout for Container {
                 };
                 let sbox = child.layout(tree, &child_constraints);
                 let child_size = sbox.size;
-                let lbox = LayoutBox::from_child(sbox, self.padding.min() + self.margin.min());
+                let lbox = LayoutBox::from_child(sbox, self.padding.min() + self.margin.min() + self.borders.min());
                 let child_id = tree.insert(lbox);
+                let child_size = Vector2::new(child_size.x + self.borders.total_width(), child_size.y + self.borders.total_height());
                 SizedLayoutBox {
                     size: self.size.clamp_between(child_size, constraints.max),
                     children: vec![child_id],
-                    material: Material::Solid(self.color),
+                    material: Some(Material {
+                        fill: self.color,
+                        borders: self.borders,
+                    }),
                     ..SizedLayoutBox::default()
                 }
             }
@@ -61,11 +67,14 @@ impl Layout for Container {
                     (self.size.x + margin_horizontal).clamp(constraints.min.x, constraints.max.x);
                 let size_y =
                     (self.size.y + margin_vertical).clamp(constraints.min.y, constraints.max.y);
-                let size = Vector2::new(size_x, size_y);
+                let child_size = Vector2::new(size_x + self.borders.total_width(), size_y + self.borders.total_height());
                 SizedLayoutBox {
-                    size,
+                    size: child_size,
                     children: vec![],
-                    material: Material::Solid(self.color),
+                    material: Some(Material {
+                        fill: self.color,
+                        borders: self.borders,
+                    }),
                     margin: self.margin,
                 }
             }
@@ -87,7 +96,7 @@ impl Layout for Rect {
                 self.size.y.clamp(constraints.min.y, constraints.max.y),
             ),
             children: vec![],
-            material: Material::Solid(self.color),
+            material: Some(Material::filled(self.color)),
             ..SizedLayoutBox::default()
         }
     }
@@ -112,7 +121,7 @@ mod tests {
             bounds: math::Rect::from_pos((0.0, 0.0), (10.0, 10.0)),
             margin: EdgeInsets::zero(),
             children: vec![],
-            material: Material::Solid(Color::green()),
+            material: Some(Material::filled(Color::green())),
         }];
         assert_slice_eq(&expected_layout, &actual_layout);
     }
@@ -131,7 +140,7 @@ mod tests {
             bounds: math::Rect::from_pos((0.0, 0.0), (100.0, 100.0)),
             margin: EdgeInsets::zero(),
             children: vec![],
-            material: Material::Solid(Color::green()),
+            material: Some(Material::filled(Color::green())),
         }];
         assert_slice_eq(&expected_layout, &actual_layout);
     }
@@ -156,13 +165,13 @@ mod tests {
                 bounds: math::Rect::from_pos((0.0, 0.0), (100.0, 100.0)),
                 margin: EdgeInsets::zero(),
                 children: vec![],
-                material: Material::Solid(Color::green()),
+                material: Some(Material::filled(Color::green())),
             },
             LayoutBox {
                 bounds: math::Rect::from_pos((0.0, 0.0), (100.0, 100.0)),
                 margin: EdgeInsets::zero(),
                 children: vec![0],
-                material: Material::Solid(Color::green()),
+                material: Some(Material::filled(Color::green())),
             },
         ];
         assert_slice_eq(&expected_layout, &actual_layout);
@@ -183,7 +192,7 @@ mod tests {
             bounds: math::Rect::from_pos((0.0, 0.0), (20.0, 20.0)),
             margin: EdgeInsets::all(5.0),
             children: vec![],
-            material: Material::Solid(Color::green()),
+            material: Some(Material::filled(Color::green())),
         }];
         assert_slice_eq(&expected_layout, &actual_layout);
     }

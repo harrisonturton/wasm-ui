@@ -6,18 +6,15 @@ use std::rc::Rc;
 mod standard;
 pub use standard::*;
 
-pub trait MeshPainter {
-    fn paint_mesh(&self, vertices: &[Vector3]) -> Result<(), Error>;
-    fn paint_line(&self, vertices: &[Vector3]) -> Result<(), Error>;
-}
-
 pub struct ShaderLibrary {
     pub standard: StandardShader,
 }
 
 impl ShaderLibrary {
     pub fn try_new(gl: &Rc<WebGl>) -> Result<ShaderLibrary, Error> {
+        super::util::log("before standard shader");
         let standard = StandardShader::try_new(gl)?;
+        super::util::log("after standard shader");
         Ok(ShaderLibrary { standard })
     }
 }

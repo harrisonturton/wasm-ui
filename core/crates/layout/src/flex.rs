@@ -255,7 +255,7 @@ impl Layout for Flex {
         SizedLayoutBox {
             size,
             children,
-            material: Material::None,
+            material: None,
             ..SizedLayoutBox::default()
         }
     }
@@ -485,7 +485,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 20.0)),
                 children: vec![0, 1],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -513,7 +513,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -537,7 +537,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -576,7 +576,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 30.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -615,7 +615,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((30.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -642,7 +642,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -669,7 +669,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -709,7 +709,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -749,7 +749,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -776,7 +776,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -803,7 +803,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -842,7 +842,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -881,7 +881,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -908,7 +908,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -935,7 +935,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -975,7 +975,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1015,7 +1015,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1046,7 +1046,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1073,7 +1073,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1112,7 +1112,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1151,7 +1151,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1178,7 +1178,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1205,7 +1205,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1245,7 +1245,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1285,7 +1285,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1312,7 +1312,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1339,7 +1339,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1365,23 +1365,23 @@ mod tests {
         let expected_layout = vec![
             LayoutBox {
                 bounds: Rect::from_pos((0.0, 70.0), (10.0, 10.0)),
-                material: Material::Solid(Color::red()),
+                material: Some(Material::filled(Color::red())),
                 ..fixed_child_lbox(Color::red())
             },
             LayoutBox {
                 bounds: Rect::from_pos((0.0, 80.0), (10.0, 10.0)),
-                material: Material::Solid(Color::green()),
+                material: Some(Material::filled(Color::green())),
                 ..fixed_child_lbox(Color::green())
             },
             LayoutBox {
                 bounds: Rect::from_pos((0.0, 90.0), (10.0, 10.0)),
-                material: Material::Solid(Color::blue()),
+                material: Some(Material::filled(Color::blue())),
                 ..fixed_child_lbox(Color::blue())
             },
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1408,7 +1408,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1435,7 +1435,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1462,7 +1462,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1489,7 +1489,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1516,7 +1516,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1543,7 +1543,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1570,7 +1570,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1597,7 +1597,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1636,7 +1636,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1675,7 +1675,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1702,7 +1702,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1729,7 +1729,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1769,7 +1769,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1809,7 +1809,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1836,7 +1836,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1863,7 +1863,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1903,7 +1903,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1943,7 +1943,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1970,7 +1970,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -1997,7 +1997,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2037,7 +2037,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2077,7 +2077,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2104,7 +2104,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2131,7 +2131,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2171,7 +2171,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2211,7 +2211,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2238,7 +2238,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2265,7 +2265,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2296,7 +2296,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2323,7 +2323,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2362,7 +2362,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2401,7 +2401,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2428,7 +2428,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2455,7 +2455,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2495,7 +2495,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((10.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2535,7 +2535,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 10.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2562,7 +2562,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2589,7 +2589,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2628,7 +2628,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2667,7 +2667,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2694,7 +2694,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2721,7 +2721,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2761,7 +2761,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2801,7 +2801,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2828,7 +2828,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2855,7 +2855,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2894,7 +2894,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2933,7 +2933,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2960,7 +2960,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -2987,7 +2987,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -3027,7 +3027,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -3067,7 +3067,7 @@ mod tests {
             LayoutBox {
                 bounds: Rect::from_size((100.0, 100.0)),
                 children: vec![0, 1, 2],
-                material: Material::None,
+                material: None,
                 ..LayoutBox::default()
             },
         ];
@@ -3100,7 +3100,7 @@ mod tests {
         LayoutBox {
             bounds: Rect::from_size((10.0, 10.0)),
             children: vec![],
-            material: Material::Solid(color),
+            material: Some(Material::filled(color)),
             ..LayoutBox::default()
         }
     }
@@ -3119,7 +3119,7 @@ mod tests {
         LayoutBox {
             bounds: Rect::from_size((10.0, 10.0)),
             children: vec![],
-            material: Material::Solid(color),
+            material: Some(Material::filled(color)),
             ..LayoutBox::default()
         }
     }
