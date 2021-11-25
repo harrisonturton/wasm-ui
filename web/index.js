@@ -19,16 +19,11 @@ function update(now) {
 requestAnimationFrame(update);
 
 function resizeCanvasToDisplaySize(canvas, multiplier) {
-    multiplier = multiplier || 1;
-    const width = canvas.clientWidth * multiplier;
-    const height = canvas.clientHeight * multiplier;
-    if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width;
-        canvas.height = height;
-        gl.viewport(0, 0, width, height);
-        return true;
-    }
-    return false;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+    gl.viewport(0, 0, width, height);
 }
 
 resizeCanvasToDisplaySize(canvas, window.devicePixelRatio);

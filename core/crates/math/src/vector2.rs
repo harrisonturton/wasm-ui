@@ -136,14 +136,26 @@ impl Vector2 {
     #[must_use]
     pub fn clamp(self, bounds: Vector2) -> Vector2 {
         Vector2::new(
-            self.x.clamp(bounds.x, bounds.y),
-            self.y.clamp(bounds.x, bounds.y),
+            safe_clamp(self.x, bounds.x, bounds.y),
+            safe_clamp(self.y, bounds.x, bounds.y),
         )
     }
 
     #[must_use]
     pub fn clamp_between(self, min: Vector2, max: Vector2) -> Vector2 {
-        Vector2::new(self.x.clamp(min.x, max.x), self.y.clamp(min.y, max.y))
+        Vector2::new(
+            safe_clamp(self.x, min.x, max.x),
+            safe_clamp(self.y, min.y, max.y),
+        )
+    }
+}
+
+fn safe_clamp(val: f32, min: f32, max: f32) -> f32 {
+    if min > max {
+        log::debug!("{:?}.clamp({:?}, {:?})", val, min, max);
+        0.0
+    } else {
+        val.clamp(min, max)
     }
 }
 

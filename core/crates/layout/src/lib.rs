@@ -7,8 +7,6 @@ pub use base::*;
 mod container;
 pub use container::*;
 
-pub mod container2;
-
 mod decoration;
 pub use decoration::*;
 

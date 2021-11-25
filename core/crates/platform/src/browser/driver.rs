@@ -8,7 +8,7 @@ use super::shaders::ShaderLibrary;
 use super::util::try_get_canvas;
 use super::WebGl;
 use crate::AppDriver;
-use layout::{Material, Color, LayoutBox, LayoutTree};
+use layout::{Color, LayoutBox, LayoutTree, Material};
 use math::{Rect, Vector2, Vector3};
 
 #[wasm_bindgen]
@@ -86,7 +86,7 @@ impl BrowserDriver {
         tree.set_root(Some(root_id));
 
         if time % 5000.0 < 50.0 {
-            super::util::log(&format!("{:#?}", tree));
+            //super::util::log(&format!("{:#?}", tree));
         }
 
         for (_, child, offset) in tree.iter() {
@@ -101,7 +101,7 @@ impl BrowserDriver {
     pub fn draw_rect(&mut self, rect: Rect, material: Option<Material>) -> Result<(), Error> {
         match material {
             Some(material) => self.shaders.standard.paint_rect(rect, material),
-            None => Ok(())
+            None => Ok(()),
         }
     }
 

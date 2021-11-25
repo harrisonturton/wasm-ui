@@ -22,7 +22,7 @@ impl Layout for Center {
             size: constraints.max,
             children: vec![id],
             material: None,
-            ..Default::default()
+            ..SizedLayoutBox::default()
         }
     }
 }

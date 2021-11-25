@@ -69,7 +69,7 @@ impl Borders {
     #[must_use]
     pub fn bottom(color: Color, width: f32) -> Borders {
         Borders {
-            top: Some(BorderSide::new(color, width)),
+            bottom: Some(BorderSide::new(color, width)),
             ..Borders::default()
         }
     }
@@ -92,15 +92,15 @@ impl Borders {
 
     #[must_use]
     pub fn min(&self) -> Vector2 {
+        let top = match self.top {
+            Some(border) => border.width,
+            None => 0.0,
+        };
         let left = match self.left {
             Some(border) => border.width,
             None => 0.0,
         };
-        let right = match self.right {
-            Some(border) => border.width,
-            None => 0.0,
-        };
-        Vector2::new(left, right)
+        Vector2::new(left, top)
     }
 
     #[must_use]
@@ -109,11 +109,11 @@ impl Borders {
             Some(border) => border.width,
             None => 0.0,
         };
-        let bottom = match self.bottom {
+        let right = match self.right {
             Some(border) => border.width,
             None => 0.0,
         };
-        Vector2::new(top, bottom)
+        Vector2::new(right, top)
     }
 
     #[must_use]
