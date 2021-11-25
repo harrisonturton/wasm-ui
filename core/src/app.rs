@@ -21,20 +21,6 @@ impl App {
         App { position }
     }
 
-    /*#[allow(dead_code)]
-    pub fn container(&self) -> Box<dyn Layout> {
-        use layout::container2::Container;
-        Box::new(Container {
-            color: Color::green(),
-            alignment: Alignment::center(),
-            child: Some(Box::new(Container {
-                color: Color::red(),
-                ..Default::default()
-            })),
-            ..Default::default()
-        })
-    }*/
-
     #[allow(dead_code)]
     pub fn sidebar(&self) -> Box<dyn Layout> {
         let border_color = Color::rgba(70.0, 70.0, 70.0, 255.0);
