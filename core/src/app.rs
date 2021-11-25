@@ -1,5 +1,5 @@
 use layout::{
-    Alignment, Axis, BorderSide, Borders, Color, Container, CrossAxisAlignment, EdgeInsets, Flex,
+    Axis, Borders, Color, Container, CrossAxisAlignment, EdgeInsets, Flex,
     Flexible, Layout, MainAxisAlignment, MainAxisSize, Positioned, Stack,
 };
 use math::Vector2;

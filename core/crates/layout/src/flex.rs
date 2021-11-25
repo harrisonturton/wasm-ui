@@ -1,4 +1,4 @@
-use super::{BoxConstraints, Layout, LayoutBox, LayoutTree, Material, SizedLayoutBox};
+use super::{Container, BoxConstraints, Layout, LayoutBox, LayoutTree, Material, SizedLayoutBox};
 use math::Vector2;
 use std::collections::VecDeque;
 use std::fmt::Debug;
@@ -456,16 +456,20 @@ mod tests {
             children: vec![
                 Box::new(Flexible {
                     flex_factor: 0.0,
-                    child: Box::new(container::Rect {
-                        size: (10.0, 10.0).into(),
+                    child: Box::new(Container {
+                        width: Some(10.0),
+                        height: Some(10.0),
                         color: Color::green(),
+                        ..Container::default()
                     }),
                 }),
                 Box::new(Flexible {
                     flex_factor: 0.0,
-                    child: Box::new(container::Rect {
-                        size: (10.0, 10.0).into(),
+                    child: Box::new(Container {
+                        width: Some(10.0),
+                        height: Some(10.0),
                         color: Color::blue(),
+                        ..Container::default()
                     }),
                 }),
             ],
@@ -3089,10 +3093,12 @@ mod tests {
         tree.boxes
     }
 
-    fn create_fixed_child(color: Color) -> Box<container::Rect> {
-        Box::new(container::Rect {
-            size: (10.0, 10.0).into(),
+    fn create_fixed_child(color: Color) -> Box<Container> {
+        Box::new(Container {
+            width: Some(10.0),
+            height: Some(10.0),
             color,
+            ..Container::default()
         })
     }
 
@@ -3108,9 +3114,11 @@ mod tests {
     fn create_flex_child(color: Color) -> Box<Flexible> {
         Box::new(Flexible {
             flex_factor: 1.0,
-            child: Box::new(container::Rect {
-                size: (10.0, 10.0).into(),
+            child: Box::new(Container {
+                width: Some(10.0),
+                height: Some(10.0),
                 color,
+                ..Container::default()
             }),
         })
     }

@@ -4,10 +4,8 @@
 mod base;
 pub use base::*;
 
-pub mod container;
-
-mod container2;
-pub use container2::*;
+mod container;
+pub use container::*;
 
 mod decoration;
 pub use decoration::*;
