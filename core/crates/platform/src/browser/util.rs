@@ -20,6 +20,8 @@ extern "C" {
 #[wasm_bindgen]
 struct WebGlOptions {
     #[allow(dead_code)]
+    alpha: bool,
+    #[allow(dead_code)]
     premultiplied_alpha: bool,
 }
 
@@ -39,6 +41,7 @@ pub fn try_get_canvas(canvas_id: &str) -> Result<HtmlCanvasElement, Error> {
 /// Try to get a [WebGlRenderingContext] from a reference to a [HtmlCanvasElement].
 pub fn try_get_webgl_context(canvas: &HtmlCanvasElement) -> Result<WebGlRenderingContext, Error> {
     let options = WebGlOptions {
+        alpha: false,
         // This is needed otherwise semi-transparent colors are assumed to have
         // transparency multiplied into their color, and are rendered weirdly.
         premultiplied_alpha: false,

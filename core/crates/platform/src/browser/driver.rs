@@ -51,17 +51,12 @@ impl BrowserDriver {
         })
     }
 
-    pub fn render(&self) -> Result<(), Error> {
-        self.clear(Color::white());
-        Ok(())
-    }
-
     pub fn clear(&self, color: Color) {
         self.gl.clear(color.r, color.g, color.b, color.a);
     }
 
     pub fn try_tick(&mut self, time: f32) -> Result<(), Error> {
-        self.clear(Color::white());
+        self.clear(Color::black());
 
         let width = self.canvas.client_width() as f32;
         let height = self.canvas.client_height() as f32;

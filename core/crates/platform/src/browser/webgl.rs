@@ -11,7 +11,7 @@ pub struct WebGl {
 
 impl WebGl {
     pub fn try_new(canvas: &HtmlCanvasElement) -> Result<WebGl, Error> {
-        let gl = super::util::try_get_webgl_context(&canvas)?;
+        let gl = super::util::try_get_webgl_context(canvas)?;
         Ok(WebGl { gl })
     }
 
@@ -58,6 +58,11 @@ impl WebGl {
         vertex_attribute_name: &str,
         buffer: &Buffer,
     ) -> Result<(), Error> {
+        self.gl.enable(WebGlRenderingContext::BLEND);
+        self.gl.blend_func(
+            WebGlRenderingContext::SRC_ALPHA,
+            WebGlRenderingContext::ONE_MINUS_SRC_ALPHA,
+        );
         self.gl
             .bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&buffer.buffer));
 
