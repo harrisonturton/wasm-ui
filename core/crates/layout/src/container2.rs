@@ -1,74 +1,8 @@
-use crate::base::EdgeInsets;
-use crate::decoration::{Color, Material};
+use crate::base::{Alignment, EdgeInsets};
+use crate::decoration::{Borders, Color, Material};
 use crate::tree::{BoxConstraints, Layout, LayoutBox, LayoutTree, SizedLayoutBox};
 use math::Vector2;
 use std::fmt::Debug;
-
-// The position of the center of a widget as a fraction of the available area.
-// The widget should not overflow at (0.0, 0.0) or at (1.0, 1.0), it should be
-// clamped to the edges of the screen.
-#[derive(PartialEq, Copy, Clone, Debug, Default)]
-pub struct Alignment {
-    x: f32,
-    y: f32,
-}
-
-impl Alignment {
-    #[must_use]
-    pub fn new(x: f32, y: f32) -> Alignment {
-        Alignment { x, y }
-    }
-
-    #[must_use]
-    pub fn top_left() -> Alignment {
-        Alignment::new(0.0, 0.0)
-    }
-
-    #[must_use]
-    pub fn top_center() -> Alignment {
-        Alignment::new(0.5, 0.0)
-    }
-
-    #[must_use]
-    pub fn top_right() -> Alignment {
-        Alignment::new(0.5, 0.0)
-    }
-
-    #[must_use]
-    pub fn center_left() -> Alignment {
-        Alignment::new(0.0, 0.5)
-    }
-
-    #[must_use]
-    pub fn center() -> Alignment {
-        Alignment::new(0.5, 0.5)
-    }
-
-    #[must_use]
-    pub fn center_right() -> Alignment {
-        Alignment::new(1.0, 0.5)
-    }
-
-    #[must_use]
-    pub fn bottom_left() -> Alignment {
-        Alignment::new(0.0, 1.0)
-    }
-
-    #[must_use]
-    pub fn bottom_center() -> Alignment {
-        Alignment::new(0.5, 1.0)
-    }
-
-    #[must_use]
-    pub fn bottom_right() -> Alignment {
-        Alignment::new(1.0, 1.0)
-    }
-
-    #[must_use]
-    pub fn to_vector(&self) -> Vector2 {
-        Vector2::new(self.x, self.y)
-    }
-}
 
 #[derive(Debug, Default)]
 pub struct Container {
@@ -76,6 +10,7 @@ pub struct Container {
     pub height: Option<f32>,
     pub alignment: Alignment,
     pub padding: EdgeInsets,
+    pub borders: Borders,
     pub margin: EdgeInsets,
     pub color: Color,
     pub child: Option<Box<dyn Layout>>,
@@ -102,13 +37,15 @@ impl Container {
         let width = Container::calculate_size(self.width, h_axis_constraints);
         let height = Container::calculate_size(self.height, v_axis_constraints);
 
+        let h_padding = self.padding.left + self.padding.right + self.borders.total_width();
+        let v_padding = self.padding.top + self.padding.bottom + self.borders.total_height();
         let child_h_constraints = match width {
-            Some(width) => Vector2::new(0.0, width),
-            None => h_axis_constraints,
+            Some(width) => Vector2::new(0.0, width - h_padding),
+            None => h_axis_constraints - Vector2::new(h_padding, 0.0),
         };
         let child_v_constraints = match height {
-            Some(height) => Vector2::new(0.0, height),
-            None => v_axis_constraints,
+            Some(height) => Vector2::new(0.0, height - v_padding),
+            None => v_axis_constraints - Vector2::new(0.0, v_padding),
         };
         let child_constraints = BoxConstraints {
             min: Vector2::new(child_h_constraints.x, child_v_constraints.x),
@@ -138,13 +75,19 @@ impl Container {
         let pos_x = (pos_x - child_size.x * 0.5).clamp(0.0, constraints.max.x - child_size.x);
         let pos_y = (pos_y - child_size.y * 0.5).clamp(0.0, constraints.max.y - child_size.y);
         let pos = Vector2::new(pos_x, pos_y);
-        let lbox = LayoutBox::from_child(sbox, pos + self.margin.min());
+        let lbox = LayoutBox::from_child(
+            sbox,
+            pos + self.margin.min() + self.padding.min() + self.borders.min(),
+        );
         let id = tree.insert(lbox);
 
         SizedLayoutBox {
             size,
             children: vec![id],
-            material: Some(Material::filled(self.color)),
+            material: Some(Material {
+                fill: self.color,
+                borders: self.borders,
+            }),
             margin: self.margin,
         }
     }
@@ -158,7 +101,10 @@ impl Container {
         SizedLayoutBox {
             size,
             children: vec![],
-            material: Some(Material::filled(self.color)),
+            material: Some(Material {
+                fill: self.color,
+                borders: self.borders,
+            }),
             margin: self.margin,
         }
     }
@@ -174,7 +120,112 @@ impl Container {
     }
 }
 
-#[cfg(tests)]
+#[cfg(test)]
 mod tests {
     use super::*;
+    use math::Rect;
+    use test_util::assert_slice_eq;
+
+    #[test]
+    pub fn container_with_no_child_fills_constraints() {
+        let container = Container {
+            color: Color::green(),
+            ..Container::default()
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&container, &constraints);
+        let expected_layout = vec![LayoutBox {
+            bounds: Rect::from_pos((0.0, 0.0), (100.0, 100.0)),
+            ..fixed_child_lbox(Color::green())
+        }];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    pub fn container_with_no_child_and_has_height_fills_container_width() {
+        let container = Container {
+            height: Some(50.0),
+            color: Color::green(),
+            ..Container::default()
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&container, &constraints);
+        let expected_layout = vec![LayoutBox {
+            bounds: Rect::from_pos((0.0, 0.0), (100.0, 50.0)),
+            ..fixed_child_lbox(Color::green())
+        }];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    pub fn container_with_no_child_and_has_width_fills_container_height() {
+        let container = Container {
+            width: Some(50.0),
+            color: Color::green(),
+            ..Container::default()
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(100.0, 100.0));
+        let actual_layout = layout_with_constraints(&container, &constraints);
+        let expected_layout = vec![LayoutBox {
+            bounds: Rect::from_pos((0.0, 0.0), (50.0, 100.0)),
+            ..fixed_child_lbox(Color::green())
+        }];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    #[test]
+    pub fn container_with_child_has_same_size_as_child_in_unbounded_parent() {
+        let container = Container {
+            color: Color::green(),
+            child: Some(Box::new(Container {
+                width: Some(50.0),
+                height: Some(50.0),
+                color: Color::red(),
+                ..Container::default()
+            })),
+            ..Container::default()
+        };
+
+        let constraints = BoxConstraints::from_max(Vector2::new(f32::INFINITY, f32::INFINITY));
+        let actual_layout = layout_with_constraints(&container, &constraints);
+        let expected_layout = vec![
+            LayoutBox {
+                bounds: Rect::from_pos((0.0, 0.0), (50.0, 50.0)),
+                ..fixed_child_lbox(Color::red())
+            },
+            LayoutBox {
+                bounds: Rect::from_pos((0.0, 0.0), (50.0, 50.0)),
+                children: vec![0],
+                ..fixed_child_lbox(Color::green())
+            },
+        ];
+        assert_slice_eq(&expected_layout, &actual_layout);
+    }
+
+    // --------------------------------------------------
+    // Helpers
+    // --------------------------------------------------
+
+    fn layout_with_constraints(
+        widget: &dyn Layout,
+        constraints: &BoxConstraints,
+    ) -> Vec<LayoutBox> {
+        let mut tree = LayoutTree::new();
+        let sbox = widget.layout(&mut tree, constraints);
+        let lbox = LayoutBox::from_child(sbox, Vector2::zero());
+        tree.insert(lbox);
+        tree.boxes
+    }
+
+    fn fixed_child_lbox(color: Color) -> LayoutBox {
+        LayoutBox {
+            bounds: Rect::from_size((10.0, 10.0)),
+            children: vec![],
+            material: Some(Material::filled(color)),
+            ..LayoutBox::default()
+        }
+    }
 }

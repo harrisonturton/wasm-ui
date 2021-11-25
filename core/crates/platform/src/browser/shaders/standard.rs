@@ -32,6 +32,7 @@ precision mediump float;
 uniform vec4 u_color;
 
 struct border_side {
+    bool enabled;
     float width;
     vec4 color;
 };
@@ -50,19 +51,17 @@ void main() {
     border_side left_border = u_borders[2];
     border_side right_border = u_borders[3];
 
-    if (v_position.y <= u_rect_min.y + top_border.width) {
+    // Probably need to do something here during resizing on fractional values
+    if (top_border.enabled && v_position.y < u_rect_min.y + top_border.width) {
         gl_FragColor = top_border.color;
         return;
-    }
-    if (v_position.y >= u_rect_max.y - bottom_border.width) {
+    } else if (bottom_border.enabled && v_position.y > u_rect_max.y - bottom_border.width) {
         gl_FragColor = bottom_border.color;
         return;
-    }
-    if (v_position.x <= u_rect_min.x + left_border.width) {
+    } else if (left_border.enabled && v_position.x < u_rect_min.x + left_border.width) {
         gl_FragColor = left_border.color;
         return;
-    }
-    if (v_position.x >= u_rect_max.x - right_border.width) {
+    } else if (right_border.enabled && v_position.x > u_rect_max.x - right_border.width) {
         gl_FragColor = right_border.color;
         return;
     }
@@ -153,8 +152,17 @@ impl StandardShader {
     fn set_border(&mut self, i: usize, maybe_border: Option<BorderSide>) -> Result<(), Error> {
         let BorderSide { color, width } = match maybe_border {
             Some(border) => border,
-            None => BorderSide::new(Color::transparent(), 0.0),
+            None => {
+                self.gl.set_uniform_i32(
+                    &self.program,
+                    &format!("u_borders[{:?}].enabled", i),
+                    0,
+                )?;
+                return Ok(());
+            }
         };
+        self.gl
+            .set_uniform_i32(&self.program, &format!("u_borders[{:?}].enabled", i), 1)?;
         self.gl
             .set_uniform_f32(&self.program, &format!("u_borders[{:?}].width", i), width)?;
         self.gl.set_uniform_vec4(

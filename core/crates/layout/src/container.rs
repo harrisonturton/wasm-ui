@@ -56,8 +56,9 @@ impl Layout for Container {
                     child_size.x + self.borders.total_width(),
                     child_size.y + self.borders.total_height(),
                 );
+                // Error definitely here. constraints.max is smaller than child_size
                 SizedLayoutBox {
-                    size: self.size.clamp_between(child_size, constraints.max),
+                    size: child_size.clamp_between(constraints.min, constraints.max),
                     children: vec![child_id],
                     material: Some(Material {
                         fill: self.color,

@@ -17,7 +17,8 @@ pub fn canary_layouts_flex_sidebar() {
         cross_axis_alignment: CrossAxisAlignment::Stretch,
         children: vec![
             Box::new(Container {
-                size: (50.0, f32::INFINITY).into(),
+                width: Some(f32::INFINITY),
+                height: Some(50.0),
                 color: Color::green(),
                 padding: EdgeInsets::all(10.0),
                 child: Some(Box::new(Flex {
@@ -27,13 +28,15 @@ pub fn canary_layouts_flex_sidebar() {
                     cross_axis_alignment: CrossAxisAlignment::Stretch,
                     children: vec![
                         Box::new(Container {
-                            size: (f32::INFINITY, 25.0).into(),
+                            width: Some(f32::INFINITY),
+                            height: Some(25.0),
                             margin: EdgeInsets::bottom(15.0),
                             color: Color::red(),
                             ..Container::default()
                         }),
                         Box::new(Container {
-                            size: (f32::INFINITY, 25.0).into(),
+                            width: Some(f32::INFINITY),
+                            height: Some(25.0),
                             margin: EdgeInsets::bottom(15.0),
                             color: Color::red(),
                             ..Container::default()
@@ -59,37 +62,37 @@ pub fn canary_layouts_flex_sidebar() {
             bounds: Rect::from_pos((0.0, 0.0), (30.0, 40.0)),
             margin: EdgeInsets::bottom(15.0),
             children: vec![],
-            material: Material::Solid(Color::red()),
+            material: Some(Material::filled(Color::red())),
         },
         LayoutBox {
             bounds: Rect::from_pos((0.0, 40.0), (30.0, 40.0)),
             margin: EdgeInsets::bottom(15.0),
             children: vec![],
-            material: Material::Solid(Color::red()),
+            material: Some(Material::filled(Color::red())),
         },
         LayoutBox {
             bounds: Rect::from_pos((10.0, 10.0), (30.0, 80.0)),
             margin: EdgeInsets::zero(),
             children: vec![0, 1],
-            material: Material::None,
+            material: None,
         },
         LayoutBox {
             bounds: Rect::from_pos((0.0, 0.0), (50.0, 100.0)),
             margin: EdgeInsets::zero(),
             children: vec![2],
-            material: Material::Solid(Color::green()),
+            material: Some(Material::filled(Color::green())),
         },
         LayoutBox {
             bounds: Rect::from_pos((50.0, 0.0), (50.0, 100.0)),
             margin: EdgeInsets::zero(),
             children: vec![],
-            material: Material::Solid(Color::blue()),
+            material: Some(Material::filled(Color::blue())),
         },
         LayoutBox {
             bounds: Rect::from_pos((0.0, 0.0), (100.0, 100.0)),
             margin: EdgeInsets::zero(),
             children: vec![3, 4],
-            material: Material::None,
+            material: None,
         },
     ];
     assert_slice_eq(&expected_layout, &actual_layout);

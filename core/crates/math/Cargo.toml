@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 bytemuck = { version = "1.4", features = [ "derive" ] }
+log = "0.4"
+console_log = { version = "0.2.0" }

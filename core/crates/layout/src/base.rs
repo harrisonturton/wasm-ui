@@ -1,5 +1,71 @@
 use math::Vector2;
 
+// The position of the center of a widget as a fraction of the available area.
+// The widget should not overflow at (0.0, 0.0) or at (1.0, 1.0), it should be
+// clamped to the edges of the screen.
+#[derive(PartialEq, Copy, Clone, Debug, Default)]
+pub struct Alignment {
+    pub x: f32,
+    pub y: f32,
+}
+
+impl Alignment {
+    #[must_use]
+    pub fn new(x: f32, y: f32) -> Alignment {
+        Alignment { x, y }
+    }
+
+    #[must_use]
+    pub fn top_left() -> Alignment {
+        Alignment::new(0.0, 0.0)
+    }
+
+    #[must_use]
+    pub fn top_center() -> Alignment {
+        Alignment::new(0.5, 0.0)
+    }
+
+    #[must_use]
+    pub fn top_right() -> Alignment {
+        Alignment::new(0.5, 0.0)
+    }
+
+    #[must_use]
+    pub fn center_left() -> Alignment {
+        Alignment::new(0.0, 0.5)
+    }
+
+    #[must_use]
+    pub fn center() -> Alignment {
+        Alignment::new(0.5, 0.5)
+    }
+
+    #[must_use]
+    pub fn center_right() -> Alignment {
+        Alignment::new(1.0, 0.5)
+    }
+
+    #[must_use]
+    pub fn bottom_left() -> Alignment {
+        Alignment::new(0.0, 1.0)
+    }
+
+    #[must_use]
+    pub fn bottom_center() -> Alignment {
+        Alignment::new(0.5, 1.0)
+    }
+
+    #[must_use]
+    pub fn bottom_right() -> Alignment {
+        Alignment::new(1.0, 1.0)
+    }
+
+    #[must_use]
+    pub fn to_vector(&self) -> Vector2 {
+        Vector2::new(self.x, self.y)
+    }
+}
+
 #[derive(PartialEq, Copy, Clone, Default, Debug)]
 pub struct EdgeInsets {
     pub top: f32,

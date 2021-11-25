@@ -86,7 +86,7 @@ impl BrowserDriver {
         tree.set_root(Some(root_id));
 
         if time % 5000.0 < 50.0 {
-            super::util::log(&format!("{:#?}", tree));
+            //super::util::log(&format!("{:#?}", tree));
         }
 
         for (_, child, offset) in tree.iter() {

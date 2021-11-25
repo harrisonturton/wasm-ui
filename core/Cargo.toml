@@ -28,6 +28,8 @@ anyhow = "1.0.44"
 math = { path = "crates/math" }
 platform = { path = "crates/platform" }
 layout = { path = "crates/layout" }
+log = "0.4"
+console_log = { version = "0.2.0" }
 
 [dependencies.web-sys]
 version = "0.3.4"
