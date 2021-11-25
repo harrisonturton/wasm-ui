@@ -23,6 +23,40 @@ There are quite a lot of hurdles to overcome. These are the big ones:
 
 Again, this is an experiment. Very little works yet, but I still think it's pretty cool. Thanks for checking it out ❤️
 
+## Screenshots
+
+**VS Code Layout Experiment**
+
+This is an experiment to mimic the VS code editor layout. It demonstrates the user of flex layout, box borders, and fill colors.
+
+Notice that it's missing any text. That still needs to be implemented.
+
+<img width="1171" alt="Screen Shot 2021-11-25 at 10 55 38 pm" src="https://user-images.githubusercontent.com/20736299/143437445-ea3cd2f3-3609-4c20-8173-c6f51dfb5dc7.png">
+
+It is roughly implemented like this (I've elided some widget definitions to keep this readable):
+
+```rust
+let widgets = Box::new(Container {
+  borders: Borders::bottom(status_bar_color, 10.0),
+  child: Some(Box::new(Flex {
+    axis: Axis::Horizontal,
+    main_axis_size: MainAxisSize::Max,
+    main_axis_alignment: MainAxisAlignment::Start,
+    cross_axis_alignment: CrossAxisAlignment::Stretch,
+    children: vec![
+      Box::new(/* First sidebar */),
+      Box::new(/* Second sidebar */),
+      Flexible {
+        flex_factor: 1.0,
+        child: Box::new(/* Empty center area */),
+      },
+      Box::new(/* Third sidebar */),
+    ]
+  })),
+  ..Container::default()
+});
+```
+
 ## Usage
 
 This library isn't distributed yet. If you want to use it, you have to clone it and write code in the `core/src` directory. I've already written the boilerplate, and the library code lives in the `core/crates` subdirectory.
