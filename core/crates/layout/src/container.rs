@@ -4,6 +4,20 @@ use crate::tree::{BoxConstraints, Layout, LayoutBox, LayoutTree, SizedLayoutBox}
 use math::Vector2;
 use std::fmt::Debug;
 
+#[derive(Debug)]
+pub struct Spacer {}
+
+impl Layout for Spacer {
+    fn layout(&self, _: &mut LayoutTree, constraints: &BoxConstraints) -> SizedLayoutBox {
+        SizedLayoutBox {
+            size: constraints.max,
+            children: vec![],
+            material: None,
+            margin: EdgeInsets::zero(),
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct Container {
     pub width: Option<f32>,
