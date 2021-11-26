@@ -314,9 +314,7 @@ impl Flex {
         match self.cross_axis_alignment {
             CrossAxisAlignment::Start | CrossAxisAlignment::Stretch => 0.0,
             CrossAxisAlignment::End => cross_max - child_cross_axis_size,
-            CrossAxisAlignment::Center => {
-                (total_cross_axis_size * 0.5) - (child_cross_axis_size * 0.5)
-            }
+            CrossAxisAlignment::Center => (cross_max * 0.5) - (child_cross_axis_size * 0.5),
         }
     }
 
